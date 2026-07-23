@@ -1,0 +1,32 @@
+name: uno
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: uno_db
+    restart: always
+    environment:
+      POSTGRES_USER: uno
+      POSTGRES_PASSWORD: uno
+      POSTGRES_DB: unodb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build: ./UnoApi
+    container_name: uno_api
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./UnoApi:/usr/src/app
+      - /usr/src/app/node_modules 
+    depends_on:
+      - db
+    env_file:
+      - ./UnoApi/.env
+
+volumes:
+  pgdata:

@@ -1,0 +1,612 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "UNO API",
+    "version": "1.0.0",
+    "description": "API documentation for the UNO card game."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local server"
+    }
+  ],
+  "paths": {
+    "/api/players": {
+      "post": {
+        "summary": "Create a new player",
+        "tags": ["Players"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlayerInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Player created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Player"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all players",
+        "tags": ["Players"],
+        "responses": {
+          "200": {
+            "description": "List of players",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Player"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/players/{id}": {
+      "get": {
+        "summary": "Get a player by ID",
+        "tags": ["Players"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Player details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Player"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a player by ID",
+        "tags": ["Players"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlayerInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Player updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Player"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a player by ID",
+        "tags": ["Players"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Player deleted successfully"
+          }
+        }
+      }
+    },
+    "/api/games": {
+      "post": {
+        "summary": "Create a new game",
+        "tags": ["Games"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Game created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Game"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all games",
+        "tags": ["Games"],
+        "responses": {
+          "200": {
+            "description": "List of games",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Game"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/games/{id}": {
+      "get": {
+        "summary": "Get a game by ID",
+        "tags": ["Games"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Game details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Game"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a game by ID",
+        "tags": ["Games"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GameInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Game updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Game"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a game by ID",
+        "tags": ["Games"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Game deleted successfully"
+          }
+        }
+      }
+    },
+    "/api/cards": {
+      "post": {
+        "summary": "Create a new card",
+        "tags": ["Cards"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Card created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Card"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all cards",
+        "tags": ["Cards"],
+        "responses": {
+          "200": {
+            "description": "List of cards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Card"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/cards/{id}": {
+      "get": {
+        "summary": "Get a card by ID",
+        "tags": ["Cards"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Card details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Card"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a card by ID",
+        "tags": ["Cards"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Card updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Card"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a card by ID",
+        "tags": ["Cards"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Card deleted successfully"
+          }
+        }
+      }
+    },
+    "/api/scores": {
+      "post": {
+        "summary": "Create a new score",
+        "tags": ["Scores"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Score created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Score"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List all scores",
+        "tags": ["Scores"],
+        "responses": {
+          "200": {
+            "description": "List of scores",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Score"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/scores/{id}": {
+      "get": {
+        "summary": "Get a score by ID",
+        "tags": ["Scores"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Score details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Score"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a score by ID",
+        "tags": ["Scores"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScoreInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Score updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Score"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a score by ID",
+        "tags": ["Scores"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Score deleted successfully"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PlayerInput": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "example": "Alice" },
+          "age": { "type": "integer", "example": 28 },
+          "email": { "type": "string", "example": "alice@example.com" }
+        }
+      },
+      "Player": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "1" },
+          "name": { "type": "string", "example": "Alice" },
+          "age": { "type": "integer", "example": 28 },
+          "email": { "type": "string", "example": "alice@example.com" },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2022-03-23T10:00:00Z" }
+        }
+      },
+      "GameInput": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "example": "UNO" },
+          "status": { "type": "string", "example": "active" },
+          "maxPlayers": { "type": "integer", "example": 4 }
+        }
+      },
+      "Game": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "1" },
+          "title": { "type": "string", "example": "UNO" },
+          "status": { "type": "string", "example": "active" },
+          "maxPlayers": { "type": "integer", "example": 4 },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2022-03-23T10:00:00Z" }
+        }
+      },
+      "CardInput": {
+        "type": "object",
+        "properties": {
+          "color": { "type": "string", "example": "blue" },
+          "value": { "type": "string", "example": "3" },
+          "gameId": { "type": "string", "example": "1" }
+        }
+      },
+      "Card": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "1" },
+          "color": { "type": "string", "example": "blue" },
+          "value": { "type": "string", "example": "3" },
+          "gameId": { "type": "string", "example": "1" },
+          "createdAt": { "type": "string", "format": "date-time", "example": "2022-03-23T10:00:00Z" }
+        }
+      },
+      "ScoreInput": {
+        "type": "object",
+        "properties": {
+          "playerId": { "type": "string", "example": "1" },
+          "gameId": { "type": "string", "example": "1" },
+          "score": { "type": "integer", "example": 200 }
+        }
+      },
+      "Score": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "1" },
+          "playerId": { "type": "string", "example": "1" },
+          "gameId": { "type": "string", "example": "1" },
+          "score": { "type": "integer", "example": 200 },
+          "timestamp": { "type": "string", "format": "date-time", "example": "2022-03-23T10:00:00Z" }
+        }
+      }
+    }
+  }
+}
