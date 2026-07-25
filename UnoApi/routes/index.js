@@ -13,17 +13,25 @@ routes.get('/health', HealthController.check);
 // Rotas do Player
 routes.post('/players', PlayerController.create);
 routes.get('/players', PlayerController.findAll);
+routes.put('/players/:id', PlayerController.update);
+routes.delete('/players/:id', PlayerController.delete);
 
 // Rotas do Game
 routes.post('/games', GameController.create);
 routes.get('/games', GameController.findAll);
+routes.put('/games/:id', GameController.update);
+routes.delete('/games/:id', GameController.delete);
 
 // Rotas do Card
 routes.post('/cards', CardController.create);
 routes.get('/cards', CardController.findAll);
+routes.put('/cards/:id', CardController.update);
+routes.delete('/cards/:id', CardController.delete);
 
 // Rotas do Score
 routes.post('/scores', ScoreController.create);
 routes.get('/scores', ScoreController.findAll);
+routes.put('/scores/:id', ScoreController.update);
+routes.delete('/scores/:id', ScoreController.delete);
 
 export default routes;

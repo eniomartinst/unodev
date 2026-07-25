@@ -1,5 +1,5 @@
 import PlayerService from '../service/PlayerService.js';
-import { createPlayerSchema } from '../dtos/request/PlayerRequestDTO.js';
+import { createPlayerSchema, updatePlayerSchema } from '../dtos/request/PlayerRequestDTO.js';
 import { formatPlayerResponse, formatManyPlayersResponse } from '../dtos/response/PlayerResponseDTO.js';
 
 class PlayerController {
@@ -27,6 +27,33 @@ class PlayerController {
       next(error);
     }
   }
+
+async update(req, res, next) {
+    try {
+      const { id } = req.params;
+      
+      // Valida o corpo da requisição usando o seu novo schema parcial
+      const validatedData = updatePlayerSchema.parse(req.body); 
+
+      // Chama o service para realizar a atualização passando os dados já validados
+      const updatedPlayer = await PlayerService.update(id, validatedData);
+
+      // Retorna 200 (OK) e a resposta padronizada
+      return res.status(200).json(formatPlayerResponse(updatedPlayer));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async delete(req, res, next) {
+    try {
+      const { id } = req.params;
+      await PlayerService.delete(id);
+      return res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
-export default new PlayerController();
+export default new PlayerController();

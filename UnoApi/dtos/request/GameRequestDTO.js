@@ -4,3 +4,5 @@ export const createGameSchema = z.object({
   status: z.string().optional(),
   maxPlayers: z.number().int().min(2).max(10)
 });
+
+export const updateGameSchema = createGameSchema.partial();

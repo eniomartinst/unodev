@@ -4,3 +4,5 @@ export const createCardSchema = z.object({
   value: z.string(),
   gameId: z.coerce.number().int().positive()
 });
+
+export const updateCardSchema = createCardSchema.partial();
