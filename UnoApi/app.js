@@ -21,13 +21,13 @@ class App {
 
   async connectDatabase() {
     await database.connect();
-    
+
     // Register models
-    await import('./repository/Player.js');
+    await import('./repository/User.js');
     await import('./repository/Game.js');
     await import('./repository/Card.js');
     await import('./repository/Score.js');
-    
+
     // Sync database schema
     await database.connection.sync({ alter: true });
     console.log('Tables synchronized.');

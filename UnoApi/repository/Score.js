@@ -1,7 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import database from '../config/database/database.js';
 
-class Score extends Model {}
+class Score extends Model { }
 
 Score.init({
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },

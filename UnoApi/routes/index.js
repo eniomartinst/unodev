@@ -1,20 +1,23 @@
 import { Router } from 'express';
 import HealthController from '../controller/HealthController.js';
-import PlayerController from '../controller/PlayerController.js';
 import GameController from '../controller/GameController.js';
 import CardController from '../controller/CardController.js';
 import ScoreController from '../controller/ScoreController.js';
+import AuthController from '../controller/AuthController.js';
+import AuthMiddleware from '../config/middleware/AuthMiddleware.js';
 
 const routes = Router();
 
 // Rota de Health Check para testar a API
 routes.get('/health', HealthController.check);
 
-// Rotas do Player
-routes.post('/players', PlayerController.create);
-routes.get('/players', PlayerController.findAll);
-routes.put('/players/:id', PlayerController.update);
-routes.delete('/players/:id', PlayerController.delete);
+// Rotas de Autenticacao
+routes.post('/auth/register', AuthController.register);
+routes.post('/auth/login', AuthController.login);
+routes.post('/auth/logout', AuthMiddleware, AuthController.logout);
+routes.get('/auth/profile', AuthMiddleware, AuthController.profile);
+routes.put('/auth/profile', AuthMiddleware, AuthController.updateProfile);
+routes.delete('/auth', AuthMiddleware, AuthController.delete);
 
 // Rotas do Game
 routes.post('/games', GameController.create);
