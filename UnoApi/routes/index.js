@@ -22,6 +22,7 @@ routes.delete('/auth', AuthMiddleware, AuthController.delete);
 // Rotas do Game
 routes.post('/games', GameController.create);
 routes.get('/games', GameController.findAll);
+routes.get('/games/:id', GameController.findById);
 routes.put('/games/:id', GameController.update);
 routes.delete('/games/:id', GameController.delete);
 
@@ -36,5 +37,19 @@ routes.post('/scores', ScoreController.create);
 routes.get('/scores', ScoreController.findAll);
 routes.put('/scores/:id', ScoreController.update);
 routes.delete('/scores/:id', ScoreController.delete);
+
+// Rotas de ações avançadas do Game (Reqs 6, 7 e 8)
+routes.post('/games/join', GameController.join);
+routes.post('/games/start', GameController.start);
+routes.post('/games/leave', GameController.leave);
+
+// Rotas de ações avançadas do Game (Reqs 9, 10, 11 e 12)
+routes.post('/games/end', GameController.end);                         // Etapa 9 — Finalizar jogo
+routes.post('/games/state', GameController.getState);                  // Etapa 10 — Estado do jogo
+routes.post('/games/players', GameController.getPlayers);              // Etapa 11 — Listar jogadores
+routes.post('/games/current-player', GameController.getCurrentPlayer); // Etapa 12 — Jogador atual
+
+routes.post('/games/top-card', GameController.getTopCard);             // Etapa 13 - Carta do topo
+routes.post('/games/scores', GameController.getScores);                // Etapa 14 - Pontuações
 
 export default routes;

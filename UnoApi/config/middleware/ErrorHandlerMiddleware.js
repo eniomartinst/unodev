@@ -15,7 +15,7 @@ const ErrorHandlerMiddleware = (err, req, res, next) => {
     return res.status(400).json({
       status: 'error',
       message: 'Validation failed',
-      details: err.errors.map(e => ({
+      details: (err.errors || err.issues).map(e => ({
         path: e.path.join('.'),
         message: e.message
       }))
