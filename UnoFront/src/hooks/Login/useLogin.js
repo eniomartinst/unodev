@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../service/authService';
+import api from '../../api/api';
+
+const fetchAndStoreCards = async () => {
+  try {
+    const cardsResponse = await api.get('/api/cards');
+    localStorage.setItem('cards', JSON.stringify(cardsResponse.data));
+  } catch (cardErr) {
+    console.error('Erro ao buscar as cartas:', cardErr);
+  }
+};
 
 export default function useLogin() {
   const navigate = useNavigate();
@@ -25,6 +35,9 @@ export default function useLogin() {
       // Salva o token localmente
       if (data.access_token) {
         localStorage.setItem('token', data.access_token);
+        
+        // Busca as 108 cartas e salva no local storage
+        await fetchAndStoreCards();
       }
       
       navigate('/rooms');

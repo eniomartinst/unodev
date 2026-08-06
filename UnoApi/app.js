@@ -6,6 +6,7 @@ import ErrorHandlerMiddleware from './config/middleware/ErrorHandlerMiddleware.j
 import NotFoundException from './config/exceptions/NotFoundException.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerDocument from './config/docs/swagger.json' with { type: 'json' };
+import CardService from './service/CardService.js';
 
 class App {
   constructor() {
@@ -31,6 +32,9 @@ class App {
     // Sync database schema
     await database.connection.sync({ alter: true });
     console.log('Tables synchronized.');
+
+    // Popular o banco com as 108 cartas
+    await CardService.seedCards();
   }
 
   middlewares() {

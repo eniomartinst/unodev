@@ -1,0 +1,47 @@
+.centerAreaContainer {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 25px;
+}
+
+.activeCardWrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+@keyframes jump {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+
+  25% {
+    transform: translateY(-40px) scale(1.1);
+  }
+
+  50% {
+    transform: translateY(0) scale(1);
+  }
+
+  75% {
+    transform: translateY(-15px) scale(1.05);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.jump {
+  animation: jump 0.5s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+.jumpDelay {
+  animation: jump 0.5s cubic-bezier(0.25, 1, 0.5, 1) 0.1s both;
+}

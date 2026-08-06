@@ -1,10 +1,13 @@
 import React from 'react';
 import AppRoutes from './routes';
+import { GameProvider } from './context/GameContext';
 import './App.css';
 
 function App() {
   return (
-    <AppRoutes />
+    <GameProvider>
+      <AppRoutes />
+    </GameProvider>
   );
 }
 
