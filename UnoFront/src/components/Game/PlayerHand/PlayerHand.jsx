@@ -2,7 +2,34 @@ import React, { useState } from 'react';
 import Card from '../Card/Card';
 import styles from './PlayerHand.module.css';
 
-export default function PlayerHand({ style, cards = [], onPlayCard }) {
+export const isCardPlayable = (card, topCard, activeColor) => {
+  if (!card) return false;
+  if (!topCard) return true;
+
+  const val = String(card.value || '').toLowerCase();
+  const col = String(card.color || '').toLowerCase();
+
+  // Curingas (Wild e WildDraw4) são sempre jogáveis no seu turno
+  if (col === 'wild' || val === 'wild' || val === 'wilddraw4' || val === '+4' || val === 'mudar_cor') {
+    return true;
+  }
+
+  // Cor ativa na mesa
+  const currentActiveColor = String(activeColor || topCard.color || '').toLowerCase();
+  if (currentActiveColor && col === currentActiveColor) {
+    return true;
+  }
+
+  // Mesmo valor / número / ação (ex: 5 em 5, Skip em Skip, Draw2 em Draw2)
+  const topVal = String(topCard.value || '').toLowerCase();
+  if (val === topVal || (val === '+2' && topVal === 'draw2') || (val === 'draw2' && topVal === '+2')) {
+    return true;
+  }
+
+  return false;
+};
+
+export default function PlayerHand({ style, cards = [], topCard, activeColor, isMyTurn = true, onPlayCard }) {
   const [scrollIndex, setScrollIndex] = useState(0);
 
   const maxVisibleCards = 15;
@@ -48,10 +75,11 @@ export default function PlayerHand({ style, cards = [], onPlayCard }) {
 
         return (
           <div 
-            key={index} 
+            key={card.id || index} 
             className={styles.cardWrapper} 
             onClick={(e) => onPlayCard && onPlayCard(index, e.currentTarget)}
             style={{ 
+
               '--card-rot': `${angle}deg`,
               '--card-y': `${yOffset}px`,
               '--card-x': `${offsetX}px`,
@@ -65,4 +93,3 @@ export default function PlayerHand({ style, cards = [], onPlayCard }) {
     </div>
   );
 }
-

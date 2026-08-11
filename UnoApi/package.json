@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js",
-    "dev": "npm install && nodemon -L server.js"
+    "dev": "nodemon server.js",
+    "test": "node --test",
+    "coverage": "npx c8 --reporter=html --reporter=text node --test"
   },
   "keywords": [],
   "author": "",

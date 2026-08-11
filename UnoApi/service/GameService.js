@@ -17,17 +17,20 @@ const findGameOrThrow = async (id) => {
 };
 
 // decodeUsername :: token -> Promise<string>
-// O payload JWT da API tem formato { user: { id } }.
-// Busca o username real no banco usando o ID extraído do token.
+// O payload JWT da API tem formato { user: { id, username, name } }.
+// Busca o username no token ou no banco usando o ID.
 const decodeUsername = async (token) => {
   try {
     const decoded = jwt.decode(token);
-    // Tenta extrair username diretamente (tokens externos/mock)
-    if (decoded && (decoded.username || decoded.name)) return decoded.username || decoded.name;
-    // Tenta resolver pelo ID do usuário (tokens emitidos por esta API)
-    if (decoded && decoded.user && decoded.user.id) {
-      const user = await User.findByPk(decoded.user.id);
-      if (user) return user.username;
+    if (!decoded) return 'Jogador';
+    if (decoded.username || decoded.name) return decoded.username || decoded.name;
+    if (decoded.user) {
+      if (decoded.user.username) return decoded.user.username;
+      if (decoded.user.name) return decoded.user.name;
+      if (decoded.user.id) {
+        const user = await User.findByPk(decoded.user.id);
+        if (user) return user.username;
+      }
     }
     return 'Jogador';
   } catch {
@@ -35,12 +38,13 @@ const decodeUsername = async (token) => {
   }
 };
 
-// findUserByToken :: token -> users[] -> user | undefined
-const findUserByToken = (token) => (users) =>
-  users.find((u) => u.token === token);
+// findUserByTokenOrUsername :: (token, username) -> users[] -> user | undefined
+const findUserByTokenOrUsername = (token, username) => (users) =>
+  users.find((u) => u.token === token || (username && u.username === username));
 
 // isCreator :: user -> boolean
 const isCreator = (user) => user && user.isCreator === true;
+
 
 // extractUsernames :: users[] -> string[]
 const extractUsernames = (users) => users.map((u) => u.username);
@@ -84,13 +88,13 @@ const GameService = {
     const game = await findGameOrThrow(data.game_id);
     if (game.status !== 'active') throw new BusinessException('Este jogo já começou ou foi encerrado.');
 
+    const username = await decodeUsername(data.access_token);
     const currentUsers = game.usersInGame || [];
-    const alreadyJoined = findUserByToken(data.access_token)(currentUsers);
+    const alreadyJoined = findUserByTokenOrUsername(data.access_token, username)(currentUsers);
 
     if (!alreadyJoined) {
       if (currentUsers.length >= game.maxPlayers) throw new BusinessException('A sala está cheia.');
 
-      const username = await decodeUsername(data.access_token);
       const newUser = {
         username,
         token: data.access_token,
@@ -109,7 +113,8 @@ const GameService = {
   startGame: async (data) => {
     const game = await findGameOrThrow(data.game_id);
     const currentUsers = game.usersInGame || [];
-    const user = findUserByToken(data.access_token)(currentUsers);
+    const username = await decodeUsername(data.access_token);
+    const user = findUserByTokenOrUsername(data.access_token, username)(currentUsers);
 
     if (!user) throw new BusinessException('Você não está nesta partida.');
     if (!isCreator(user)) throw new BusinessException('Apenas o criador pode iniciar a partida.');
@@ -119,6 +124,7 @@ const GameService = {
     await Game.update({ status: 'in_progress', currentPlayerIndex: 0 }, { where: { id: game.id } });
     return true;
   },
+
 
   // ─── Requisito 8 — Sair do jogo ───────────────────────────────────────────
   leaveGame: async (data) => {

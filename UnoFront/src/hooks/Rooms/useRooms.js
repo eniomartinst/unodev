@@ -34,7 +34,10 @@ export default function useRooms() {
 
   useEffect(() => {
     carregarDadosDoLobby();
+    const interval = setInterval(carregarDadosDoLobby, 2000);
+    return () => clearInterval(interval);
   }, []);
+
 
   // --- Criar Sala e Entrar ---
   const handleCreateRoom = async () => {

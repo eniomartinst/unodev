@@ -198,3 +198,144 @@
   z-index: 9999;
   transform-origin: center center;
 }
+
+.turnBanner {
+  position: absolute;
+  top: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 30px;
+  padding: 8px 24px;
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.turnBannerMyTurn {
+  border-color: #34c759;
+  background: rgba(52, 199, 89, 0.25);
+  color: #34c759;
+  animation: pulseTurn 1.5s infinite alternate;
+}
+
+@keyframes pulseTurn {
+  0% {
+    box-shadow: 0 0 10px rgba(52, 199, 89, 0.4);
+    transform: translateX(-50%) scale(1);
+  }
+  100% {
+    box-shadow: 0 0 25px rgba(52, 199, 89, 0.9);
+    transform: translateX(-50%) scale(1.04);
+  }
+}
+
+.colorPickerOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.colorPickerBox {
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.colorPickerTitle {
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+}
+
+.colorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.colorBtn {
+  width: 90px;
+  height: 90px;
+  border-radius: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+  color: #fff;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8);
+  transition: transform 0.1s, filter 0.2s;
+}
+
+.colorBtn:hover {
+  transform: scale(1.08);
+  filter: brightness(1.15);
+}
+
+.colorBtn:active {
+  transform: scale(0.95);
+}
+
+.feedbackToast {
+  position: absolute;
+  top: 140px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 12px;
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 500;
+  animation: slideDown 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toastError {
+  background: rgba(220, 38, 38, 0.95);
+  border: 2px solid #ef4444;
+}
+
+.toastWarning {
+  background: rgba(217, 119, 6, 0.95);
+  border: 2px solid #f59e0b;
+}
+
+@keyframes slideDown {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+

@@ -2,9 +2,30 @@ import Card from '../repository/Card.js';
 import NotFoundException from '../config/exceptions/NotFoundException.js';
 
 class CardService {
+  // Cria uma nova carta no banco
+  async create(data) {
+    return await Card.create(data);
+  }
+
   // Retorna o dicionário completo para o front-end
   async findAll() { 
     return await Card.findAll(); 
+  }
+
+  // Atualiza os campos de uma carta existente pelo id
+  async update(id, data) {
+    const existingCard = await Card.findByPk(id);
+    if (!existingCard) throw new NotFoundException(`Carta com ID ${id} não encontrada.`);
+    await Card.update(data, { where: { id } });
+    return await Card.findByPk(id);
+  }
+
+  // Remove uma carta do banco pelo id
+  async delete(id) {
+    const existingCard = await Card.findByPk(id);
+    if (!existingCard) throw new NotFoundException(`Carta com ID ${id} não encontrada.`);
+    await Card.destroy({ where: { id } });
+    return true;
   }
 
   // Método para gerar as 108 cartas oficiais do UNO de forma automatizada

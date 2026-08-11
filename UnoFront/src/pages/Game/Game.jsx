@@ -14,7 +14,10 @@ import tableImg from '../../assets/mesa-bar-itens svg.svg';
 
 export default function Game() {
   const {
+    currentUser,
     isLobbyMode,
+    isCreator,
+    lobbyPlayers,
     startGame,
     isShaking,
     animatingCard,
@@ -23,10 +26,17 @@ export default function Game() {
     playedCards,
     playerCards,
     handlePlayCard,
-    handleUnoClick
+    handleDrawCard,
+    handleUnoClick,
+    colorPickerOpen,
+    handleSelectColor,
+    feedbackMessage
   } = useGame();
 
   const onUnoClick = () => handleUnoClick(unoAudio);
+  const myUsername = currentUser?.username || currentUser?.name || 'Você';
+  const isMyTurn = gameState.currentTurnPlayer === myUsername;
+  const topCard = playedCards[playedCards.length - 1];
 
   return (
     <div className={styles.htmlBody}>
@@ -42,6 +52,25 @@ export default function Game() {
         {/* Top Header */}
         <Header score={gameState.score} roomId={gameState.roomId} />
 
+        {/* Turn Banner (When game is running) */}
+        {!isLobbyMode && gameState.currentTurnPlayer && (
+          <div className={`${styles.turnBanner} ${isMyTurn ? styles.turnBannerMyTurn : ''}`}>
+            {isMyTurn ? (
+              <span>🎯 SUA VEZ DE JOGAR!</span>
+            ) : (
+              <span>⏳ Vez de {gameState.currentTurnPlayer}...</span>
+            )}
+          </div>
+        )}
+
+        {/* Notifications (Victory / End of Round) */}
+        {feedbackMessage && feedbackMessage.type === 'success' && (
+          <div className={styles.feedbackToast} style={{ background: 'rgba(52, 199, 89, 0.95)', border: '2px solid #34c759' }}>
+            {feedbackMessage.text}
+          </div>
+        )}
+
+
         {/* Bar Table Image */}
         <div className={`${styles.tableImageWrapper} ${isShaking ? styles.shake : ''}`}>
           <img src={tableImg} alt="Table" className={styles.tableImage} />
@@ -49,11 +78,13 @@ export default function Game() {
 
         {/* Dynamic Opponents (supports 1v1 up to 4 players) */}
         {opponents.map(opp => {
+          const isOppTurn = gameState.currentTurnPlayer === opp.name;
+
           if (opp.position === 'top') {
             return (
               <React.Fragment key={opp.id}>
                 <div className={styles.topPlayerProfile}>
-                  <PlayerProfile name={opp.name} avatar={opp.avatar} cardCount={opp.cardCount} avatarBg={opp.avatarBg} avatarBorder={opp.avatarBorder} layout="horizontal-right" />
+                  <PlayerProfile name={opp.name} avatar={opp.avatar} cardCount={opp.cardCount} avatarBg={opp.avatarBg} avatarBorder={isOppTurn ? '#ead426' : opp.avatarBorder} layout="horizontal-right" />
                 </div>
                 <OpponentHand style={{ left: '50%', top: '130px', transform: 'translateX(-50%) scale(1.3)' }} cardCount={opp.cardCount} />
               </React.Fragment>
@@ -63,7 +94,7 @@ export default function Game() {
             return (
               <React.Fragment key={opp.id}>
                 <div className={styles.leftPlayerProfile}>
-                  <PlayerProfile name={opp.name} avatar={opp.avatar} cardCount={opp.cardCount} avatarBg={opp.avatarBg} avatarBorder={opp.avatarBorder} />
+                  <PlayerProfile name={opp.name} avatar={opp.avatar} cardCount={opp.cardCount} avatarBg={opp.avatarBg} avatarBorder={isOppTurn ? '#ead426' : opp.avatarBorder} />
                 </div>
                 <OpponentHand style={{ left: '150px', top: '50%', transform: 'translateY(-50%) scale(1.3)' }} containerTransform="rotate(-90deg)" cardCount={opp.cardCount} />
               </React.Fragment>
@@ -73,7 +104,7 @@ export default function Game() {
             return (
               <React.Fragment key={opp.id}>
                 <div className={styles.rightPlayerProfile}>
-                  <PlayerProfile name={opp.name} avatar={opp.avatar} cardCount={opp.cardCount} avatarBg={opp.avatarBg} avatarBorder={opp.avatarBorder} />
+                  <PlayerProfile name={opp.name} avatar={opp.avatar} cardCount={opp.cardCount} avatarBg={opp.avatarBg} avatarBorder={isOppTurn ? '#ead426' : opp.avatarBorder} />
                 </div>
                 <OpponentHand style={{ right: '150px', top: '50%', transform: 'translateY(-50%) scale(1.3)' }} containerTransform="rotate(90deg)" cardCount={opp.cardCount} />
               </React.Fragment>
@@ -83,11 +114,16 @@ export default function Game() {
         })}
 
         {/* Center Area (Discard / Draw Pile) */}
-        <CenterArea playedCards={playedCards} isShaking={isShaking} style={{ transform: 'translate(-50%, -50%) scale(1.3)' }} />
+        <CenterArea 
+          playedCards={playedCards} 
+          isShaking={isShaking} 
+          style={{ transform: 'translate(-50%, -50%) scale(1.3)' }} 
+        />
+
 
         {/* Bottom Player (You) Profile */}
         <div className={styles.bottomPlayerProfile}>
-          <PlayerProfile name="Você" avatar="🐶" cardCount={playerCards.length} avatarBg="#34c759" avatarBorder="#3f3f46" layout="horizontal-left" />
+          <PlayerProfile name={`${myUsername} (Você)`} avatar="🐶" cardCount={playerCards.length} avatarBg="#34c759" avatarBorder={isMyTurn ? '#34c759' : '#3f3f46'} layout="horizontal-left" />
         </div>
 
         {/* Action Buttons */}
@@ -95,13 +131,19 @@ export default function Game() {
           <p className={styles.unoButtonText}>UNO!</p>
         </div>
 
-        <div className={styles.drawButton}>
+        <div className={styles.drawButton} onClick={handleDrawCard}>
           <p className={styles.drawButtonText}>COMPRAR</p>
           <p className={styles.drawButtonText}>CARTA</p>
         </div>
 
-        {/* Bottom Player Hand */}
-        <PlayerHand cards={playerCards} onPlayCard={handlePlayCard} />
+        {/* Bottom Player Hand (Highlights playable cards when it's your turn) */}
+        <PlayerHand 
+          cards={playerCards} 
+          topCard={topCard}
+          activeColor={gameState.activeColor}
+          isMyTurn={isMyTurn}
+          onPlayCard={handlePlayCard} 
+        />
 
         {/* Flying Card Overlay */}
         {animatingCard && (
@@ -120,11 +162,36 @@ export default function Game() {
           </div>
         )}
 
+        {/* Color Picker Modal for Wild Cards */}
+        {colorPickerOpen && (
+          <div className={styles.colorPickerOverlay}>
+            <div className={styles.colorPickerBox}>
+              <h3 className={styles.colorPickerTitle}>Escolha a nova cor</h3>
+              <div className={styles.colorGrid}>
+                <button className={styles.colorBtn} style={{ backgroundColor: '#b01e35' }} onClick={() => handleSelectColor('Red')}>
+                  Vermelho
+                </button>
+                <button className={styles.colorBtn} style={{ backgroundColor: '#075ca9' }} onClick={() => handleSelectColor('Blue')}>
+                  Azul
+                </button>
+                <button className={styles.colorBtn} style={{ backgroundColor: '#73aa2c' }} onClick={() => handleSelectColor('Green')}>
+                  Verde
+                </button>
+                <button className={styles.colorBtn} style={{ backgroundColor: '#ead426', color: '#000' }} onClick={() => handleSelectColor('Yellow')}>
+                  Amarelo
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Lobby Overlay */}
         {isLobbyMode && (
           <LobbyModal 
-            opponents={opponents} 
-            roomId={gameState.roomId} 
+            roomId={gameState.roomId}
+            players={lobbyPlayers}
+            currentUser={currentUser}
+            isCreator={isCreator}
             onStart={startGame} 
           />
         )}

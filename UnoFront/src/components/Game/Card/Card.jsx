@@ -1,12 +1,32 @@
 import React from 'react';
 import styles from './Card.module.css';
 
+const COLOR_MAP = {
+  Red: '#b01e35',
+  Blue: '#075ca9',
+  Green: '#73aa2c',
+  Yellow: '#ead426',
+  Wild: '#222'
+};
+
+const normalizeValue = (val) => {
+  if (!val && val !== 0) return '7';
+  const s = String(val).toLowerCase();
+  if (s === 'skip' || s === 'bloqueio') return 'skip';
+  if (s === 'reverse' || s === 'reverso') return 'reverse';
+  if (s === 'draw2' || s === '+2') return '+2';
+  if (s === 'wild' || s === 'mudar_cor') return 'wild';
+  if (s === 'wilddraw4' || s === 'wild_draw4' || s === '+4') return '+4';
+  return String(val);
+};
+
 const renderContent = (val, position) => {
+  const norm = normalizeValue(val);
   const isCenter = position === 'center';
   const iconSize = isCenter ? '60px' : '20px';
   const dropShadow = isCenter ? 'drop-shadow(-2px 2px 0px rgba(0,0,0,0.8))' : 'drop-shadow(-1px 1px 0px rgba(0,0,0,0.8))';
 
-  if (val === 'skip' || val === 'bloqueio') {
+  if (norm === 'skip') {
     return (
       <svg width={iconSize} height={iconSize} viewBox="0 0 100 100" fill="none" stroke="white" strokeWidth="16" style={{ filter: dropShadow, display: 'block', margin: 'auto' }}>
         <circle cx="50" cy="50" r="34" />
@@ -15,7 +35,7 @@ const renderContent = (val, position) => {
     );
   }
   
-  if (val === 'reverse' || val === 'reverso') {
+  if (norm === 'reverse') {
     return (
       <svg width={iconSize} height={iconSize} viewBox="0 0 100 100" fill="none" stroke="white" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" style={{ filter: dropShadow, display: 'block', margin: 'auto' }}>
         <path d="M 40 25 A 25 25 0 0 1 75 50 M 75 50 L 65 40 M 75 50 L 85 40" />
@@ -24,7 +44,7 @@ const renderContent = (val, position) => {
     );
   }
 
-  if (val === 'wild' || val === 'mudar_cor') {
+  if (norm === 'wild') {
     return (
       <svg width={iconSize} height={iconSize} viewBox="0 0 100 100" style={{ filter: dropShadow, display: 'block', margin: 'auto' }}>
         <g transform="translate(50 50) rotate(-60) scale(0.65 1) translate(-50 -50)">
@@ -37,7 +57,7 @@ const renderContent = (val, position) => {
     );
   }
 
-  if (val === '+4' || val === 'wild_draw4') {
+  if (norm === '+4') {
     if (!isCenter) {
       return <p>+4</p>;
     }
@@ -49,6 +69,10 @@ const renderContent = (val, position) => {
          <rect x="60" y="25" width="30" height="45" rx="5" fill="#ead426" stroke="white" strokeWidth="3" />
       </svg>
     );
+  }
+
+  if (norm === '+2') {
+    return <p style={{ fontSize: isCenter ? '42px' : '18px', fontWeight: 900 }}>+2</p>;
   }
 
   return <p>{val}</p>;
@@ -83,13 +107,14 @@ export default function Card({ type = 'back', color = '#ff3b30', value = '7', ro
     );
   }
 
-  const isWildCard = value === 'wild' || value === 'mudar_cor' || value === '+4' || value === 'wild_draw4';
-  const bgColor = isWildCard ? '#222' : color;
+  const normVal = normalizeValue(value);
+  const isWildCard = normVal === 'wild' || normVal === '+4' || color === 'Wild' || color === '#222';
+  const resolvedColor = isWildCard ? '#222' : (COLOR_MAP[color] || color || '#b01e35');
 
   return (
       <div className={styles.cardContainer} style={{ transform: `rotate(${rotation}deg)`, ...style }}>
         <div className={styles.cardFrontBg} style={{ boxShadow: shadowStyle || '2px 2px 5px 0px rgba(0,0,0,0.3)' }}>
-          <div className={styles.cardFrontInner} style={{ backgroundColor: bgColor }}>
+          <div className={styles.cardFrontInner} style={{ backgroundColor: resolvedColor }}>
             <div className={styles.cardFrontEllipse}>
                <div className={styles.ellipseInner}></div>
             </div>
@@ -101,3 +126,4 @@ export default function Card({ type = 'back', color = '#ff3b30', value = '7', ro
       </div>
   );
 }
+

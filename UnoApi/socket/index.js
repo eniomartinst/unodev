@@ -1,6 +1,7 @@
 import { Server } from 'socket.io';
 import AuthSocketMiddleware from '../config/middleware/AuthSocketMiddleware.js';
 import setupTestEvents from './handlers/TestHandler.js';
+import setupGameEvents from './handlers/GameHandler.js';
 
 export const setupSocket = (httpServer) => {
   const io = new Server(httpServer, {
@@ -18,6 +19,9 @@ export const setupSocket = (httpServer) => {
 
     // Delega os eventos de teste para o arquivo de exemplo
     setupTestEvents(io, socket);
+
+    // Delega os eventos do Jogo (UNO)
+    setupGameEvents(io, socket);
 
     socket.on('disconnect', () => {
       console.log(`[Socket] Client disconnected: ${socket.id}`);

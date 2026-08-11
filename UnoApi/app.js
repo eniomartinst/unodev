@@ -28,6 +28,8 @@ class App {
     await import('./repository/Game.js');
     await import('./repository/Card.js');
     await import('./repository/Score.js');
+    await import('./repository/Round.js');
+
 
     // Sync database schema
     await database.connection.sync({ alter: true });
