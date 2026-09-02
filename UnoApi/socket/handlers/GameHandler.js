@@ -2,6 +2,7 @@ import GameService from '../../service/GameService.js';
 import RoundService from '../../service/RoundService.js';
 import ScoreService from '../../service/ScoreService.js';
 import User from '../../repository/User.js';
+import { formatManyGamesResponse } from '../../dtos/response/GameResponseDTO.js';
 
 // ---------------------------------------------------------------------------
 // GameHandler — Socket Controller do Game Loop UNO
@@ -24,22 +25,31 @@ import User from '../../repository/User.js';
 // ---------------------------------------------------------------------------
 
 export default function setupGameEvents(io, socket) {
-  // Helper local: emite erro apenas para o socket requisitante (não broadcast)
+  // Helper local: emite erro apenas para o socket requisitante 
   const emitError = (originalEvent, message) => {
     socket.emit('game:error', { event: originalEvent, message });
   };
 
-  // ─── Entrar na sala (canal Socket.IO) ─────────────────────────────────────
+  // Entrar na sala (canal Socket.IO) 
   socket.on('game:join_room', async (data) => {
-    const { gameId } = data;
+    const { gameId, token: payloadToken } = data;
     const username = socket.user?.username || 'Desconhecido';
+    const token = payloadToken || socket.handshake?.auth?.token;
 
     if (!gameId) return;
-    socket.join(`game_${gameId}`);
-    socket.join(`private_${gameId}_${username}`);
-    console.log(`[GameHandler] ${username} entrou na sala game_${gameId} (e private_${gameId}_${username})`);
 
     try {
+      // Regra de negócio
+      if (token) {
+        await GameService.joinGame({ game_id: gameId, access_token: token }).catch(e => {
+          console.error('[GameHandler] Erro no joinGame:', e.message);
+        });
+      }
+
+      socket.join(`game_${gameId}`);
+      socket.join(`private_${gameId}_${username}`);
+      console.log(`[GameHandler] ${username} entrou na sala game_${gameId} (e private_${gameId}_${username})`);
+
       const game = await GameService.findById(gameId);
       const players = game?.usersInGame || [];
 
@@ -49,6 +59,10 @@ export default function setupGameEvents(io, socket) {
         players,
         status: game?.status
       });
+
+      // Atualiza todas as "bolinhas" do menu de salas para todos os usuários online!
+      const allGames = await GameService.findAll();
+      io.emit('lobby:updated', formatManyGamesResponse(allGames));
 
       socket.to(`game_${gameId}`).emit('game:update', {
         action: 'user_joined',
@@ -162,6 +176,11 @@ export default function setupGameEvents(io, socket) {
       let hands = { ...round.hands, [username]: hand.filter((_, i) => i !== cardIndex) };
       let discardPile = [...(round.discardPile || []), card];
       let deck = [...(round.deck || [])];
+      let saidUno = { ...(round.saidUno || {}) };
+
+      if (hands[username].length > 1) {
+        saidUno[username] = false;
+      }
 
       // 5. Aplica as compras forçadas ao próximo jogador imediato (Draw2/WildDraw4)
       if (pendingDraws > 0) {
@@ -172,6 +191,7 @@ export default function setupGameEvents(io, socket) {
         if (nextUsername) {
           const { drawn, deck: d, discardPile: disc } = RoundService.drawCards(deck, discardPile, pendingDraws);
           hands = { ...hands, [nextUsername]: [...(hands[nextUsername] || []), ...drawn] };
+          if (hands[nextUsername].length > 1) saidUno[nextUsername] = false;
           deck = d;
           discardPile = disc;
         }
@@ -192,6 +212,7 @@ export default function setupGameEvents(io, socket) {
         deck,
         discardPile,
         hands,
+        saidUno,
         status: roundWinner ? 'finished' : 'active',
       });
 
@@ -245,6 +266,12 @@ export default function setupGameEvents(io, socket) {
         ...round.hands,
         [username]: [...((round.hands || {})[username] || []), ...drawn],
       };
+      
+      let saidUno = { ...(round.saidUno || {}) };
+      if (hands[username].length > 1) {
+        saidUno[username] = false;
+      }
+
       const nextIndex = RoundService.advanceTurn(
         round.currentPlayerIndex,
         round.direction,
@@ -253,7 +280,7 @@ export default function setupGameEvents(io, socket) {
       );
 
       // 3. Persiste e faz broadcast
-      await round.update({ deck, discardPile, hands, currentPlayerIndex: nextIndex });
+      await round.update({ deck, discardPile, hands, saidUno, currentPlayerIndex: nextIndex });
 
       const updatedRoundData = round.toJSON();
       const publicState = RoundService.publicRoundState(updatedRoundData, players);
@@ -270,19 +297,131 @@ export default function setupGameEvents(io, socket) {
   });
 
   // ─── Sair da sala ─────────────────────────────────────────────────────────
-  socket.on('game:leave_room', (data) => {
-    const { gameId } = data;
+  socket.on('game:leave_room', async (data) => {
+    const { gameId, token: payloadToken } = data;
     const username = socket.user?.username || 'Desconhecido';
+    const token = payloadToken || socket.handshake?.auth?.token;
 
     if (!gameId) return;
-    socket.leave(`game_${gameId}`);
-    console.log(`[GameHandler] ${username} saiu da sala game_${gameId}`);
 
-    socket.to(`game_${gameId}`).emit('game:update', {
-      action: 'user_left',
-      user: username,
-      message: `${username} saiu da sala.`,
-    });
+    try {
+      if (token) {
+        await GameService.leaveGame({ game_id: gameId, access_token: token }).catch(e => {
+          console.error('[GameHandler] Erro no leaveGame:', e.message);
+        });
+      }
+
+      socket.leave(`game_${gameId}`);
+      console.log(`[GameHandler] ${username} saiu da sala game_${gameId}`);
+
+      socket.to(`game_${gameId}`).emit('game:update', {
+        action: 'user_left',
+        user: username,
+        message: `${username} saiu da sala.`,
+      });
+
+      // Atualiza quem ficou na sala
+      const game = await GameService.findById(gameId).catch(() => null);
+      if (game) {
+        io.to(`game_${gameId}`).emit('lobby:updated', {
+          gameId,
+          players: game.usersInGame || [],
+          status: game.status
+        });
+      }
+
+      // Atualiza todas as "bolinhas" do menu de salas para todos os usuários online!
+      const allGames = await GameService.findAll();
+      io.emit('lobby:updated', formatManyGamesResponse(allGames));
+
+    } catch (err) {
+      console.error('[GameHandler] erro ao processar saída da sala:', err);
+    }
+  });
+
+  // ─── FLUXO UNO: turn:say_uno ──────────────────────────
+  socket.on('turn:say_uno', async (data) => {
+    try {
+      const { gameId } = data;
+      const username = socket.user?.username;
+
+      const round = await RoundService.getActiveRound(gameId);
+      if (!round) return emitError('turn:say_uno', 'Nenhuma rodada ativa encontrada.');
+
+      const hand = (round.hands || {})[username] || [];
+      if (hand.length <= 2) {
+        const saidUno = { ...(round.saidUno || {}) };
+        saidUno[username] = true;
+        await round.update({ saidUno });
+
+        io.to(`game_${gameId}`).emit('game:uno_shouted', {
+          username,
+          message: `${username} gritou UNO!`,
+        });
+      }
+    } catch (err) {
+      console.error('[GameHandler] turn:say_uno error:', err);
+      emitError('turn:say_uno', err.message || 'Erro ao gritar UNO.');
+    }
+  });
+
+  // ─── FLUXO DESAFIO: turn:challenge ──────────────────────────
+  socket.on('turn:challenge', async (data) => {
+    try {
+      const { gameId } = data;
+      const challenger = socket.user?.username;
+
+      const game = await GameService.findById(gameId);
+      const players = game.usersInGame || [];
+      const round = await RoundService.getActiveRound(gameId);
+
+      if (!round) return emitError('turn:challenge', 'Nenhuma rodada ativa encontrada.');
+
+      const hands = round.hands || {};
+      const saidUno = round.saidUno || {};
+      
+      let punishedPlayer = null;
+      for (const player of players) {
+        const username = player.username;
+        if (hands[username] && hands[username].length === 1 && !saidUno[username]) {
+           punishedPlayer = username;
+           break;
+        }
+      }
+
+      if (punishedPlayer) {
+        const { drawn, deck, discardPile } = RoundService.drawCards(
+          round.deck || [],
+          round.discardPile || [],
+          2
+        );
+        
+        const newHands = {
+          ...hands,
+          [punishedPlayer]: [...hands[punishedPlayer], ...drawn]
+        };
+        const newSaidUno = { ...saidUno, [punishedPlayer]: false };
+        
+        await round.update({ deck, discardPile, hands: newHands, saidUno: newSaidUno });
+        
+        const updatedRoundData = round.toJSON();
+        const publicState = RoundService.publicRoundState(updatedRoundData, players);
+        
+        io.to(`game_${gameId}`).emit('round:updated', {
+          message: `🚨 ${challenger} desafiou! ${punishedPlayer} não disse UNO e comprou 2 cartas!`,
+          ...publicState,
+        });
+        io.to(`game_${gameId}`).emit('game:challenged', {
+          message: `🚨 ${challenger} desafiou! ${punishedPlayer} não disse UNO e comprou 2 cartas!`
+        });
+        emitPrivateHands(io, gameId, updatedRoundData, players);
+      } else {
+        emitError('turn:challenge', 'Ninguém esqueceu de falar UNO.');
+      }
+    } catch (err) {
+      console.error('[GameHandler] turn:challenge error:', err);
+      emitError('turn:challenge', err.message || 'Erro ao desafiar.');
+    }
   });
 }
 
@@ -334,6 +473,10 @@ async function handleRoundEnd(io, gameId, hands, players, winnerUsername) {
       totalScores: updatedScores,
       message: `🏆 ${gameWinner} venceu a partida com ${updatedScores[gameWinner]} pontos!`,
     });
+
+    // Atualiza o lobby globalmente
+    const games = await GameService.findAll();
+    io.emit('lobby:updated', formatManyGamesResponse(games));
 
   } else {
     // ── Rodada encerrada, partida continua ────────────────────────────────────
