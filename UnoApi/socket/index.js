@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import AuthSocketMiddleware from '../config/middleware/AuthSocketMiddleware.js';
 import setupTestEvents from './handlers/TestHandler.js';
 import setupGameEvents from './handlers/GameHandler.js';
+import setupLobbyEvents from './handlers/LobbyHandler.js';
 
 export const setupSocket = (httpServer) => {
   const io = new Server(httpServer, {
@@ -22,6 +23,9 @@ export const setupSocket = (httpServer) => {
 
     // Delega os eventos do Jogo (UNO)
     setupGameEvents(io, socket);
+
+    // Delega os eventos do Lobby (Salas)
+    setupLobbyEvents(io, socket);
 
     socket.on('disconnect', () => {
       console.log(`[Socket] Client disconnected: ${socket.id}`);
