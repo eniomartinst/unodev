@@ -13,7 +13,8 @@ Round.init({
   pendingDraws: { type: DataTypes.INTEGER, defaultValue: 0 },
   deck: { type: DataTypes.JSON, defaultValue: [] },
   discardPile: { type: DataTypes.JSON, defaultValue: [] },
-  hands: { type: DataTypes.JSON, defaultValue: {} }
+  hands: { type: DataTypes.JSON, defaultValue: {} },
+  saidUno: { type: DataTypes.JSON, defaultValue: {} }
 }, { sequelize: database.connection, modelName: 'Round', tableName: 'rounds', timestamps: true });
 
 export default Round;
