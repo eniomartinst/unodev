@@ -69,8 +69,21 @@ export default function Rooms() {
 
             {settingsOpen && (
               <div className={styles.settingsDropdown}>
-                <button className={styles.dropdownItem} onClick={() => { setSettingsOpen(false); navigate('/settings'); }}><IconSettings size={14} /> Configurações</button>
-                <button className={styles.dropdownItem} onClick={() => { setSettingsOpen(false); navigate('/login'); }}><IconLogOut size={14} /> Sair da conta</button>
+                <button className={styles.dropdownItem} onClick={() => { 
+                  setSettingsOpen(false); 
+                  navigate('/settings'); 
+                }}>
+                  <IconSettings size={14} /> Configurações
+                </button>
+                
+                <button className={styles.dropdownItem} onClick={() => { 
+                  setSettingsOpen(false); 
+                  localStorage.removeItem('token'); 
+                  localStorage.removeItem('currentRoomId');
+                  navigate('/login'); 
+                }}>
+                  <IconLogOut size={14} /> Sair da conta
+                </button>
               </div>
             )}
           </div>
