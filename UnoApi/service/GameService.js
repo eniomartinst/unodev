@@ -83,10 +83,10 @@ const GameService = {
     return true;
   },
 
-  // ─── Requisito 6 — Entrar no jogo ─────────────────────────────────────────
+  // ─── Entrar no jogo ─────────────────────────────────────────
   joinGame: async (data) => {
     const game = await findGameOrThrow(data.game_id);
-    if (game.status !== 'active') throw new BusinessException('Este jogo já começou ou foi encerrado.');
+    if (game.status !== 'waiting') throw new BusinessException('Este jogo já começou ou foi encerrado.');
 
     const username = await decodeUsername(data.access_token);
     const currentUsers = game.usersInGame || [];
@@ -109,7 +109,7 @@ const GameService = {
     return true;
   },
 
-  // ─── Requisito 7 — Iniciar o jogo ─────────────────────────────────────────
+  // ─── Iniciar o jogo ─────────────────────────────────────────
   startGame: async (data) => {
     const game = await findGameOrThrow(data.game_id);
     const currentUsers = game.usersInGame || [];
@@ -126,18 +126,32 @@ const GameService = {
   },
 
 
-  // ─── Requisito 8 — Sair do jogo ───────────────────────────────────────────
+  // ─── Sair do jogo ───────────────────────────────────────────
   leaveGame: async (data) => {
     const game = await findGameOrThrow(data.game_id);
     const currentUsers = game.usersInGame || [];
 
-    // filter é uma HOF; cria novo array sem mutar o original
+    // Remove o jogador que está saindo
     const updatedUsers = currentUsers.filter((u) => u.token !== data.access_token);
+
+    // Se não sobrar ninguém, encerra a sala (apenas se estiver em progresso) para não virar sala fantasma
+    // Se estiver em 'waiting', apenas deixa a sala vazia (assim o React Strict Mode não destrói a sala)
+    if (updatedUsers.length === 0) {
+      const newStatus = game.status === 'in_progress' ? 'finished' : game.status;
+      await Game.update({ status: newStatus, usersInGame: [] }, { where: { id: game.id } });
+      return true;
+    }
+
+    // UX: Se o criador da sala saiu, passa a "coroa" para o próximo jogador
+    if (!updatedUsers.some((u) => u.isCreator)) {
+      updatedUsers[0].isCreator = true;
+    }
+
     await Game.update({ usersInGame: updatedUsers }, { where: { id: game.id } });
     return true;
   },
 
-  // ─── Requisito 9 — Finalizar o jogo ───────────────────────────────────────
+  // ─── Finalizar o jogo ───────────────────────────────────────
   //
   // Lógica (pipeline funcional):
   //   1. Busca o jogo pelo ID (ou lança NotFoundException)
@@ -174,13 +188,13 @@ const GameService = {
     return true;
   },
 
-  // ─── Requisito 10 — Obter estado atual do jogo ────────────────────────────
+  // ─── Obter estado atual do jogo ────────────────────────────
   getGameState: async (data) => {
     // Usa findGameOrThrow para centralizar o tratamento de 404
     return await findGameOrThrow(data.game_id);
   },
 
-  // ─── Requisito 11 — Listar jogadores no jogo ──────────────────────────────
+  // ─── Listar jogadores no jogo ──────────────────────────────
   //
   // Usa a HOF `map` (via extractUsernames) para transformar o array de objetos
   // em um array de strings, sem mutação.
@@ -191,7 +205,7 @@ const GameService = {
     return { game, playerNames };
   },
 
-  // ─── Requisito 12 — Obter o jogador atual ─────────────────────────────────
+  // ─── Obter o jogador atual ─────────────────────────────────
   getCurrentTurnPlayer: async (data) => {
     const game = await findGameOrThrow(data.game_id);
     const users = game.usersInGame || [];
@@ -199,7 +213,7 @@ const GameService = {
     return { game, currentPlayer };
   },
 
-  // Requisito 13 - Pegar carta do topo da pilha de descarte
+  // Pegar carta do topo da pilha de descarte
   getTopCard: async (data) => {
     // Reutiliza a função auxiliar pura que já existe no arquivo para validar o jogo
     const game = await findGameOrThrow(data.game_id);
@@ -211,7 +225,7 @@ const GameService = {
     };
   },
 
-  // Requisito 14 - Obter pontuações atuais de todos os jogadores
+  // Obter pontuações atuais de todos os jogadores
   getScores: async (data) => {
     const game = await findGameOrThrow(data.game_id);
 
