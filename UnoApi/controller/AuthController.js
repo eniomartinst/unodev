@@ -7,7 +7,11 @@ import {
   formatProfileResponse
 } from '../dtos/response/AuthResponseDTO.js';
 
+// AuthController — Controla o fluxo das requisições de autenticação e perfil
+// Delega a lógica de negócio ao AuthService e formata a resposta com DTOs.
+
 class AuthController {
+  // Registro de Usuário
   async register(req, res, next) {
     try {
       const validatedData = registerSchema.parse(req.body);
@@ -23,6 +27,7 @@ class AuthController {
     }
   }
 
+  // Login de Usuário
   async login(req, res, next) {
     try {
       const validatedData = loginSchema.parse(req.body);
@@ -38,6 +43,7 @@ class AuthController {
     }
   }
 
+  // Logout de Usuário
   async logout(req, res, next) {
     try {
       // Middleware já validou o token, req.user tem os dados
@@ -49,6 +55,7 @@ class AuthController {
     }
   }
 
+  // Obter Perfil do Usuário
   async profile(req, res, next) {
     try {
       // Passamos o ID do usuário direto, extraído pelo middleware
@@ -63,6 +70,7 @@ class AuthController {
     }
   }
 
+  // Atualizar Perfil do Usuário
   async updateProfile(req, res, next) {
     try {
       const validatedData = updateProfileSchema.parse(req.body);
@@ -80,6 +88,7 @@ class AuthController {
     }
   }
 
+  // Deletar Conta do Usuário
   async delete(req, res, next) {
     try {
       await AuthService.deleteUser(req.user.id);
