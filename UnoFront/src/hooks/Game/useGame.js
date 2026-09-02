@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import { socket, connectSocket } from '../../socket/socket';
 import { isCardPlayable } from '../../components/Game/PlayerHand/PlayerHand';
+import unoAudio from '../../assets/batida na mesa.mp3';
 
 const AVATARS = ['🐶', '🐱', '🦊', '🐼', '🦁', '🐸', '🐨'];
 const AVATAR_BGS = ['#34c759', '#d8b4fe', '#312e81', '#10b981', '#f59e0b', '#ec4899'];
@@ -105,7 +106,7 @@ export default function useGame() {
 
         // Connect socket
         const s = connectSocket(token);
-        s.emit('game:join_room', { gameId: Number(roomId) });
+        s.emit('game:join_room', { gameId: Number(roomId), token });
 
       } catch (err) {
         console.error('Erro ao autenticar usuário:', err);
@@ -190,9 +191,27 @@ export default function useGame() {
       console.warn('[Game] Erro na jogada:', data?.message);
     };
 
+    const handleUnoShout = (data) => {
+      const myUsername = currentUser?.username || currentUser?.name;
+      
+      // Se eu fui quem gritou, o som já tocou no meu click (bypass de autoplay)
+      if (data.username !== myUsername) {
+        const audio = new Audio(unoAudio);
+        audio.play().catch((e) => console.warn('Erro audio socket:', e));
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 500);
+      }
+      
+      setFeedbackMessage({ text: data.message || 'UNO!', type: 'success' });
+    };
+
+    const handleChallengeAlert = (data) => {
+      setFeedbackMessage({ text: data.message, type: 'warning' });
+    };
+
 
     const handleConnect = () => {
-      socket.emit('game:join_room', { gameId: Number(roomId) });
+      socket.emit('game:join_room', { gameId: Number(roomId), token });
     };
 
     socket.on('connect', handleConnect);
@@ -202,6 +221,8 @@ export default function useGame() {
     socket.on('round:finished', handleRoundFinished);
     socket.on('game:finished', handleGameFinished);
     socket.on('game:error', handleGameError);
+    socket.on('game:uno_shouted', handleUnoShout);
+    socket.on('game:challenged', handleChallengeAlert);
 
     return () => {
       socket.off('connect', handleConnect);
@@ -211,7 +232,9 @@ export default function useGame() {
       socket.off('round:finished', handleRoundFinished);
       socket.off('game:finished', handleGameFinished);
       socket.off('game:error', handleGameError);
-      socket.emit('game:leave_room', { gameId: Number(roomId) });
+      socket.off('game:uno_shouted', handleUnoShout);
+      socket.off('game:challenged', handleChallengeAlert);
+      socket.emit('game:leave_room', { gameId: Number(roomId), token });
     };
 
   }, [roomId, token, navigate, updateOpponentsState]);
@@ -339,13 +362,35 @@ export default function useGame() {
 
 
   // 5. UNO Button Click
-  const handleUnoClick = (audioSource) => {
-    if (audioSource) {
-      const audio = new Audio(audioSource);
-      audio.play().catch(() => {});
-    }
+  const handleUnoClick = () => {
+    // Tocar localmente garantido pelo clique do usuário (bypass política de autoplay)
+    const audio = new Audio(unoAudio);
+    audio.play().catch((e) => console.warn('Erro audio click:', e));
+    
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 500);
+
+    socket.emit('turn:say_uno', { gameId: Number(roomId) });
+  };
+
+  // 6. Challenge Button Click
+  const handleChallenge = () => {
+    socket.emit('turn:challenge', { gameId: Number(roomId) });
+  };
+
+  // 6. Sair da Partida
+  const handleLeaveGame = () => {
+    socket.emit('game:leave_room', { gameId: Number(roomId), token });
+    localStorage.removeItem('currentRoomId');
+    navigate('/'); // Redireciona de volta para o lobby de salas
+  };
+
+  // 7. Sair da Conta (Logout)
+  const handleLogout = () => {
+    socket.disconnect(); // Desconecta o WebSocket para evitar vazamento de memória
+    localStorage.removeItem('token');
+    localStorage.removeItem('currentRoomId');
+    navigate('/login'); // Força a volta para a tela de login
   };
 
   return {
@@ -363,6 +408,9 @@ export default function useGame() {
     handlePlayCard,
     handleDrawCard,
     handleUnoClick,
+    handleChallenge,
+    handleLeaveGame,
+    handleLogout,
     colorPickerOpen,
     handleSelectColor,
     feedbackMessage
