@@ -8,7 +8,6 @@ import CenterArea from '../../components/Game/CenterArea/CenterArea';
 import Header from '../../components/Game/Header/Header';
 import Card from '../../components/Game/Card/Card';
 import LobbyModal from '../../components/Game/LobbyModal/LobbyModal';
-import unoAudio from '../../assets/batida na mesa.mp3';
 import backgroundImg from '../../assets/background.jpg';
 import tableImg from '../../assets/mesa-bar-itens svg.svg';
 
@@ -28,12 +27,14 @@ export default function Game() {
     handlePlayCard,
     handleDrawCard,
     handleUnoClick,
+    handleChallenge,
     colorPickerOpen,
     handleSelectColor,
-    feedbackMessage
+    feedbackMessage,
+    handleLeaveGame,
+    handleLogout
   } = useGame();
 
-  const onUnoClick = () => handleUnoClick(unoAudio);
   const myUsername = currentUser?.username || currentUser?.name || 'Você';
   const isMyTurn = gameState.currentTurnPlayer === myUsername;
   const topCard = playedCards[playedCards.length - 1];
@@ -50,7 +51,12 @@ export default function Game() {
         <div className={styles.boardOverlay}></div>
 
         {/* Top Header */}
-        <Header score={gameState.score} roomId={gameState.roomId} />
+        <Header 
+          score={gameState.score}
+          roomId={gameState.roomId}
+          onLeaveGame={handleLeaveGame}
+          onLogout={handleLogout}
+        />
 
         {/* Turn Banner (When game is running) */}
         {!isLobbyMode && gameState.currentTurnPlayer && (
@@ -63,9 +69,12 @@ export default function Game() {
           </div>
         )}
 
-        {/* Notifications (Victory / End of Round) */}
-        {feedbackMessage && feedbackMessage.type === 'success' && (
-          <div className={styles.feedbackToast} style={{ background: 'rgba(52, 199, 89, 0.95)', border: '2px solid #34c759' }}>
+        {/* Notifications (Victory / End of Round / Challenges) */}
+        {feedbackMessage && (
+          <div 
+            className={`${styles.feedbackToast} ${feedbackMessage.type === 'warning' ? styles.toastWarning : styles.toastError}`} 
+            style={feedbackMessage.type === 'success' ? { background: 'rgba(52, 199, 89, 0.95)', border: '2px solid #34c759' } : {}}
+          >
             {feedbackMessage.text}
           </div>
         )}
@@ -127,8 +136,12 @@ export default function Game() {
         </div>
 
         {/* Action Buttons */}
-        <div className={styles.unoButton} onClick={onUnoClick}>
+        <div className={styles.unoButton} onClick={handleUnoClick}>
           <p className={styles.unoButtonText}>UNO!</p>
+        </div>
+
+        <div className={styles.challengeButton} onClick={handleChallenge}>
+          <p className={styles.challengeButtonText}>DESAFIAR</p>
         </div>
 
         <div className={styles.drawButton} onClick={handleDrawCard}>
