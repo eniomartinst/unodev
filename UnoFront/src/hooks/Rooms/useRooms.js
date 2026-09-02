@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
+import { socket, connectSocket } from '../../socket/socket';
 
 export default function useRooms() {
   const navigate = useNavigate();
@@ -34,8 +35,24 @@ export default function useRooms() {
 
   useEffect(() => {
     carregarDadosDoLobby();
-    const interval = setInterval(carregarDadosDoLobby, 2000);
-    return () => clearInterval(interval);
+    
+    const socketInstance = connectSocket();
+
+    const handleLobbyUpdate = (games) => {
+      const salasFormatadas = games.map(game => ({
+        id: game.id,
+        max: game.maxPlayers,
+        players: game.usersInGame ? game.usersInGame.length : 0, 
+        status: game.status === 'in_progress' ? 'em jogo' : 'aguardando' 
+      }));
+      setRooms(salasFormatadas);
+    };
+
+    socketInstance.on('lobby:updated', handleLobbyUpdate);
+
+    return () => {
+      socketInstance.off('lobby:updated', handleLobbyUpdate);
+    };
   }, []);
 
 
@@ -46,21 +63,14 @@ export default function useRooms() {
       const createRes = await api.post('/api/games', {
         title: `Sala do ${user?.name || 'Jogador'}`,
         maxPlayers: maxPlayers,
-        status: 'active'
+        status: 'waiting'
       });
       
       const newGameId = createRes.data.id;
-      const token = localStorage.getItem('token');
 
-      // Entra na sala automaticamente usando as lógicas de negócio do Backend
-      await api.post('/api/games/join', {
-        game_id: newGameId,
-        access_token: token
-      });
-      
       // Salva o ID da sala para a tela de Game saber qual mesa carregar
       localStorage.setItem('currentRoomId', newGameId); 
-      navigate('/game'); // Redireciona para a mesa do jogo!
+      navigate('/game'); // Redireciona para a mesa do jogo! A tela /game vai emitir game:join_room via Socket
 
     } catch (error) {
       console.error("Erro ao criar sala:", error);
@@ -71,14 +81,8 @@ export default function useRooms() {
   // --- Entrar numa Sala Existente ---
   const handleJoinRoom = async (gameId) => {
     try {
-      const token = localStorage.getItem('token');
-      await api.post('/api/games/join', {
-          game_id: gameId,
-          access_token: token
-      });
-      
       localStorage.setItem('currentRoomId', gameId);
-      navigate('/game');
+      navigate('/game'); // A tela /game vai emitir game:join_room via Socket
     } catch (error) {
       console.error("Erro ao entrar na sala:", error);
       alert(error.response?.data?.error || "Erro ao entrar na sala");
