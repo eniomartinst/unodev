@@ -4,7 +4,9 @@ import GameController from '../controller/GameController.js';
 import CardController from '../controller/CardController.js';
 import ScoreController from '../controller/ScoreController.js';
 import AuthController from '../controller/AuthController.js';
+import StatsController from '../controller/StatsController.js';
 import AuthMiddleware from '../config/middleware/AuthMiddleware.js';
+import MemoizationMiddleware from '../config/middleware/MemoizationMiddleware.js';
 
 const routes = Router();
 
@@ -50,6 +52,12 @@ routes.post('/games/players', GameController.getPlayers);              // Etapa 
 routes.post('/games/current-player', GameController.getCurrentPlayer); // Etapa 12 — Jogador atual
 
 routes.post('/games/top-card', GameController.getTopCard);             // Etapa 13 - Carta do topo
-routes.post('/games/scores', GameController.getScores);                // Etapa 14 - Pontuações
+routes.post('/games/scores', MemoizationMiddleware({ max: 50, maxAge: 5000 }), GameController.getScores);                // Etapa 14 - Pontuações
+
+// Rotas de Estatísticas
+routes.get('/stats/usage', StatsController.getUsage);
+routes.get('/stats/performance', StatsController.getPerformance);
+routes.get('/stats/status-codes', StatsController.getStatusCodes);
+routes.get('/stats/popular-endpoints', StatsController.getPopularEndpoints);
 
 export default routes;
