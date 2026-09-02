@@ -2,7 +2,10 @@ import User from '../repository/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
+// AuthService — Centraliza as regras de negócio de usuários e autenticação
+
 class AuthService {
+  // Registrar Usuário
   async register(data) {
     const { username, name, email, password, age } = data;
 
@@ -27,6 +30,7 @@ class AuthService {
     return user;
   }
 
+  // Login de Usuário
   async login(data) {
     const { username, password } = data;
 
@@ -57,12 +61,13 @@ class AuthService {
     return token;
   }
 
+  // Logout de Usuário
   async logout(userId) {
-    // Em uma implementação mais robusta, você poderia adicionar o token a uma blacklist
     // Aqui, apenas confirmamos a intenção de logout conforme requisito
     return true;
   }
 
+  // Obter Perfil do Usuário
   async getProfile(userId) {
     const user = await User.findByPk(userId);
 
@@ -73,6 +78,7 @@ class AuthService {
     return user;
   }
 
+  // Atualizar Perfil do Usuário
   async updateProfile(userId, data) {
     const user = await User.findByPk(userId);
     
@@ -109,6 +115,7 @@ class AuthService {
     return user;
   }
 
+  // Deletar Conta do Usuário
   async deleteUser(userId) {
     const user = await User.findByPk(userId);
 
