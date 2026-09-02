@@ -590,6 +590,58 @@
           }
         }
       }
+    },
+    "/api/stats/usage": {
+      "get": {
+        "summary": "Get API usage statistics",
+        "tags": [
+          "Stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage stats successfully retrieved"
+          }
+        }
+      }
+    },
+    "/api/stats/performance": {
+      "get": {
+        "summary": "Get API performance statistics",
+        "tags": [
+          "Stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "Performance stats successfully retrieved"
+          }
+        }
+      }
+    },
+    "/api/stats/status-codes": {
+      "get": {
+        "summary": "Get API status codes statistics",
+        "tags": [
+          "Stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "Status code stats successfully retrieved"
+          }
+        }
+      }
+    },
+    "/api/stats/popular-endpoints": {
+      "get": {
+        "summary": "Get API popular endpoints statistics",
+        "tags": [
+          "Stats"
+        ],
+        "responses": {
+          "200": {
+            "description": "Popular endpoints stats successfully retrieved"
+          }
+        }
+      }
     }
   },
   "components": {
