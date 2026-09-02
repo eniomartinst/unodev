@@ -63,7 +63,7 @@ const GameController = {
     } catch (error) { next(error); }
   },
 
-  // ─── Requisito 6 — Entrar no jogo ─────────────────────────────────────────
+  // ───  — Entrar no jogo ─────────────────────────────────────────
   join: async (req, res, next) => {
     try {
       const validatedData = gameActionSchema.parse(req.body);
@@ -72,7 +72,7 @@ const GameController = {
     } catch (error) { next(error); }
   },
 
-  // ─── Requisito 7 — Iniciar o jogo ─────────────────────────────────────────
+  // ───  — Iniciar o jogo ─────────────────────────────────────────
   start: async (req, res, next) => {
     try {
       const validatedData = gameActionSchema.parse(req.body);
@@ -81,7 +81,7 @@ const GameController = {
     } catch (error) { next(error); }
   },
 
-  // ─── Requisito 8 — Sair do jogo ───────────────────────────────────────────
+  // ───  — Sair do jogo ───────────────────────────────────────────
   leave: async (req, res, next) => {
     try {
       const validatedData = gameActionSchema.parse(req.body);
@@ -90,7 +90,7 @@ const GameController = {
     } catch (error) { next(error); }
   },
 
-  // ─── Requisito 9 — Finalizar o jogo ───────────────────────────────────────
+  // ───  — Finalizar o jogo ───────────────────────────────────────
   // POST /games/end  { game_id, access_token }
   end: async (req, res, next) => {
     try {
@@ -100,7 +100,7 @@ const GameController = {
     } catch (error) { next(error); }
   },
 
-  // ─── Requisito 10 — Obter estado atual do jogo ────────────────────────────
+  // ───  — Obter estado atual do jogo ────────────────────────────
   // POST /games/state  { game_id }
   getState: async (req, res, next) => {
     try {
@@ -110,7 +110,7 @@ const GameController = {
     } catch (error) { next(error); }
   },
 
-  // ─── Requisito 11 — Listar jogadores no jogo ──────────────────────────────
+  // ─── Listar jogadores no jogo ──────────────────────────────
   // POST /games/players  { game_id }
   getPlayers: async (req, res, next) => {
     try {
@@ -121,7 +121,7 @@ const GameController = {
     } catch (error) { next(error); }
   },
 
-  // ─── Requisito 12 — Obter o jogador atual ─────────────────────────────────
+  // ───  — Obter o jogador atual ─────────────────────────────────
   // POST /games/current-player  { game_id }
   getCurrentPlayer: async (req, res, next) => {
     try {
@@ -131,7 +131,7 @@ const GameController = {
     } catch (error) { next(error); }
   },
 
-  // Requisito 13 - Obter a carta do topo
+  //  - Obter a carta do topo
   // POST /games/top-card { game_id }
   getTopCard: async (req, res, next) => {
     try {
@@ -148,7 +148,7 @@ const GameController = {
     }
   },
 
-  // Requisito 14 - Obter pontuações atuais
+  //  - Obter pontuações atuais
   // POST /games/scores { game_id }
   getScores: async (req, res, next) => {
     try {
