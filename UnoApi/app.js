@@ -3,6 +3,7 @@ import cors from 'cors';
 import database from './config/database/database.js';
 import routes from './routes/index.js';
 import ErrorHandlerMiddleware from './config/middleware/ErrorHandlerMiddleware.js';
+import TrackingMiddleware from './config/middleware/TrackingMiddleware.js';
 import NotFoundException from './config/exceptions/NotFoundException.js';
 import swaggerUi from 'swagger-ui-express';
 import swaggerDocument from './config/docs/swagger.json' with { type: 'json' };
@@ -29,6 +30,7 @@ class App {
     await import('./repository/Card.js');
     await import('./repository/Score.js');
     await import('./repository/Round.js');
+    await import('./repository/Tracking.js');
 
 
     // Sync database schema
@@ -47,6 +49,7 @@ class App {
         allowedHeaders: ['Content-Type', 'Authorization']
       }));
       this.express.use(express.json());
+      this.express.use(TrackingMiddleware);
       console.log('Middlewares configured.');
     } catch (error) {
       console.error('Error configuring middlewares:', error);
