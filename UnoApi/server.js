@@ -12,7 +12,8 @@ const startServer = async () => {
   await appInstance.init();
 
   const server = http.createServer(appInstance.express);
-  setupSocket(server);
+  const io = setupSocket(server);
+  appInstance.express.set('io', io);
 
   server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
