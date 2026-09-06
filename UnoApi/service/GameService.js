@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import Game from '../repository/Game.js';
 import User from '../repository/User.js';
+import Round from '../repository/Round.js';
 import BusinessException from '../config/exceptions/BusinessException.js';
 import NotFoundException from '../config/exceptions/NotFoundException.js';
 import { pipe } from '../config/utils/fp.js';
@@ -97,7 +98,6 @@ const GameService = {
 
       const newUser = {
         username,
-        token: data.access_token,
         isCreator: currentUsers.length === 0,
         isReady: true
       };
@@ -130,15 +130,23 @@ const GameService = {
   leaveGame: async (data) => {
     const game = await findGameOrThrow(data.game_id);
     const currentUsers = game.usersInGame || [];
+    const username = await decodeUsername(data.access_token);
 
-    // Remove o jogador que está saindo
-    const updatedUsers = currentUsers.filter((u) => u.token !== data.access_token);
+    // Remove o jogador que está saindo (comparando por username ou token)
+    const updatedUsers = currentUsers.filter((u) => u.username !== username && u.token !== data.access_token);
 
-    // Se não sobrar ninguém, encerra a sala (apenas se estiver em progresso) para não virar sala fantasma
-    // Se estiver em 'waiting', apenas deixa a sala vazia (assim o React Strict Mode não destrói a sala)
+    // Se não sobrar ninguém na sala, encerra o jogo e deleta a partida do banco
     if (updatedUsers.length === 0) {
-      const newStatus = game.status === 'in_progress' ? 'finished' : game.status;
-      await Game.update({ status: newStatus, usersInGame: [] }, { where: { id: game.id } });
+      if (game.status === 'waiting') {
+        await Game.update({ usersInGame: [] }, { where: { id: game.id } });
+      } else {
+        // Se a partida já estava em andamento ou finalizada, passa a foice no banco.
+        try {
+          await Game.destroy({ where: { id: game.id }, force: true });
+        } catch (err) {
+          await Game.update({ status: 'finished', usersInGame: [] }, { where: { id: game.id } });
+        }
+      }
       return true;
     }
 
@@ -170,7 +178,7 @@ const GameService = {
     // Currying: valida se o token é do criador, capturando `token` no closure
     const validateCreator = (token) => (g) => {
       const users = g.usersInGame || [];
-      const user = findUserByToken(token)(users);
+      const user = findUserByTokenOrUsername(token, null)(users);
       if (!user) throw new BusinessException('Usuário não encontrado nesta partida.');
       if (!isCreator(user)) throw new BusinessException('Apenas o criador do jogo pode encerrá-lo.');
       return g;
@@ -215,13 +223,24 @@ const GameService = {
 
   // Pegar carta do topo da pilha de descarte
   getTopCard: async (data) => {
-    // Reutiliza a função auxiliar pura que já existe no arquivo para validar o jogo
     const game = await findGameOrThrow(data.game_id);
 
-    // Formato exato exigido pelo LMS
+    // Busca a rodada ativa da partida no banco de dados
+    const activeRound = await Round.findOne({
+      where: { gameId: game.id, status: 'active' },
+      order: [['createdAt', 'DESC']]
+    });
+
+    const discardPile = activeRound?.discardPile || [];
+    const topCard = discardPile.at(-1);
+
+    if (!topCard) {
+      throw new BusinessException('A pilha de descarte está vazia.');
+    }
+
     return {
       game_id: game.id,
-      top_card: "Red 5"
+      top_card: `${topCard.color} ${topCard.value}`
     };
   },
 
@@ -236,11 +255,6 @@ const GameService = {
       game.usersInGame.forEach(user => {
         scoresObj[user.username] = (game.totalScores || {})[user.username] || 0;
       });
-    } else {
-      // Mock JSON de exemplo
-      scoresObj["Player1"] = 100;
-      scoresObj["Player2"] = 75;
-      scoresObj["Player3"] = 120;
     }
 
     return {
