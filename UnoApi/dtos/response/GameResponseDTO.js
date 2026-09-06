@@ -1,10 +1,18 @@
 export const formatGameResponse = (game) => {
+  const sanitizedUsers = (game.usersInGame || []).map(u => {
+    if (typeof u === 'object' && u !== null) {
+      const { token, ...rest } = u;
+      return rest;
+    }
+    return u;
+  });
+
   return {
     id: game.id,
     title: game.title,
     status: game.status,
     maxPlayers: game.maxPlayers,
-    usersInGame: game.usersInGame,
+    usersInGame: sanitizedUsers,
     createdAt: game.createdAt
   };
 };
