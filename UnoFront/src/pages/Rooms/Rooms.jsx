@@ -30,8 +30,6 @@ export default function Rooms() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleJoin = () => navigate('/game');
-
   return (
     <div className={styles.page}>
       {/* Background Image & Overlay */}
@@ -128,14 +126,18 @@ export default function Rooms() {
                         <div key={i} className={`${styles.slot} ${i < room.players ? styles.slotFull : ''}`} />
                       ))}
                     </div>
-                    <button
-                      id={`join-room-${room.id}`}
-                      className={styles.enterBtn}
-                      disabled={room.status === 'em jogo' || room.players >= room.max}
-                      onClick={() => handleJoinRoom(room.id)}
-                    >
-                      {room.status === 'em jogo' ? 'Assistir' : 'Entrar'}
-                    </button>
+                    
+                    {/* Renderiza o botão de ENTRAR apenas se o jogo NÃO estiver em andamento */}
+                    {room.status !== 'em jogo' && (
+                      <button
+                        id={`join-room-${room.id}`}
+                        className={styles.enterBtn}
+                        disabled={room.players >= room.max}
+                        onClick={() => handleJoinRoom(room.id)}
+                      >
+                        Entrar
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
