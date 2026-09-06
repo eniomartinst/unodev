@@ -2,6 +2,7 @@ import { describe, it, beforeEach, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import GameService from '../../service/GameService.js';
 import Game from '../../repository/Game.js';
+import Round from '../../repository/Round.js';
 import jwt from 'jsonwebtoken';
 import BusinessException from '../../config/exceptions/BusinessException.js';
 import NotFoundException from '../../config/exceptions/NotFoundException.js';
@@ -103,12 +104,25 @@ describe('GameService', () => {
     // Teste para: Recuperação de informações do estado da partida e da carta do descarte
     it('Consultas: getTopCard e getGameState', async () => {
       mock.method(Game, 'findByPk', async () => ({ id: 1 }));
+      mock.method(Round, 'findOne', async () => ({
+        discardPile: [{ id: 1, color: 'Red', value: '5' }]
+      }));
       
       const state = await GameService.getGameState({ game_id: 1 });
       const topCard = await GameService.getTopCard({ game_id: 1 });
       
       assert.strictEqual(state.id, 1);
       assert.strictEqual(topCard.top_card, "Red 5");
+    });
+
+    it('getTopCard deve lançar erro se a pilha de descarte estiver vazia', async () => {
+      mock.method(Game, 'findByPk', async () => ({ id: 1 }));
+      mock.method(Round, 'findOne', async () => null);
+
+      await assert.rejects(
+        async () => await GameService.getTopCard({ game_id: 1 }),
+        BusinessException
+      );
     });
   });
 });
