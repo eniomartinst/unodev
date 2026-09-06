@@ -32,7 +32,8 @@ export default function Game() {
     handleSelectColor,
     feedbackMessage,
     handleLeaveGame,
-    handleLogout
+    handleLogout,
+    timeLeft // Desestruturação do timer visual
   } = useGame();
 
   const myUsername = currentUser?.username || currentUser?.name || 'Você';
@@ -126,9 +127,13 @@ export default function Game() {
         {/* Center Area (Discard / Draw Pile) */}
         <CenterArea 
           playedCards={playedCards} 
+          activeColor={gameState.activeColor}
           isShaking={isShaking} 
+          onDrawCard={handleDrawCard}
+          isMyTurn={isMyTurn}
           style={{ transform: 'translate(-50%, -50%) scale(1.3)' }} 
         />
+
 
 
         {/* Bottom Player (You) Profile */}
@@ -141,14 +146,31 @@ export default function Game() {
           <p className={styles.unoButtonText}>UNO!</p>
         </div>
 
-        <div className={styles.challengeButton} onClick={handleChallenge}>
-          <p className={styles.challengeButtonText}>DESAFIAR</p>
+        <div className={styles.challengeButton} onClick={handleChallenge} title="Desafiar jogador que esqueceu de gritar UNO">
+          <span style={{ fontSize: '24px' }}>🚨</span>
         </div>
 
-        <div className={styles.drawButton} onClick={handleDrawCard}>
-          <p className={styles.drawButtonText}>COMPRAR</p>
-          <p className={styles.drawButtonText}>CARTA</p>
-        </div>
+        {/* Timer UI Element */}
+        {!isLobbyMode && gameState.currentTurnPlayer && (
+          <div style={{
+            position: 'absolute',
+            bottom: '30px',
+            right: '30px',
+            backgroundColor: timeLeft <= 3 ? '#ff3b30' : '#1c1c1e',
+            color: '#fff',
+            padding: '6px 14px',
+            borderRadius: '20px',
+            fontWeight: 'bold',
+            fontSize: '16px',
+            border: `2px solid ${timeLeft <= 3 ? '#fff' : '#444'}`,
+            zIndex: 100,
+            boxShadow: '0 4px 10px rgba(0,0,0,0.5)',
+            transition: 'all 0.3s ease',
+            transform: timeLeft <= 3 && isMyTurn ? 'scale(1.1)' : 'scale(1)'
+          }}>
+            ⏱️ {timeLeft}s
+          </div>
+        )}
 
         {/* Bottom Player Hand (Highlights playable cards when it's your turn) */}
         <PlayerHand 
