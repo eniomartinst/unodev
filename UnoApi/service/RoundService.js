@@ -159,10 +159,10 @@ const RoundService = {
 
     for (let i = 0; i < count; i++) {
       if (newDeck.length === 0) {
-        if (newDiscard.length <= 1) break; // Deck e descarte esgotados
-        const topCard = newDiscard.pop();
-        newDeck = shuffle(newDiscard);
-        newDiscard = [topCard];
+        if (newDiscard.length <= 1) break;  // Deck e descarte esgotados
+        const topCard = newDiscard.pop();  // Pega a carta do topo
+        newDeck = shuffle(newDiscard);     // Embaralha o resto
+        newDiscard = [topCard];           // Mantém só a do topo no descarte
       }
       drawn.push(newDeck.shift());
     }
