@@ -43,6 +43,9 @@ export default function useGame() {
   const [animatingCard, setAnimatingCard] = useState(null);
   const [feedbackMessage, setFeedbackMessage] = useState(null);
 
+  // Timer regressivo visual para a interface
+  const [timeLeft, setTimeLeft] = useState(10);
+
   // Wild Card color picker
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const [pendingWildPlay, setPendingWildPlay] = useState(null);
@@ -140,8 +143,16 @@ export default function useGame() {
     const handleRoundUpdated = (data) => {
       setIsLobbyMode(false);
 
+      // Sempre que houver uma atualização na rodada (mudança de turno), reseta o cronômetro para 10
+      setTimeLeft(10);
+
       if (data.topCard) {
         setPlayedCards(prev => {
+          // Evita duplicar a mesma carta na mesa se for um broadcast de estado (ex: comprar carta, gritar UNO)
+          if (prev.length > 0 && prev[prev.length - 1].id === data.topCard.id) {
+            return prev;
+          }
+
           const topWithVisuals = {
             ...data.topCard,
             type: 'front',
@@ -153,7 +164,6 @@ export default function useGame() {
           return next.length > 6 ? next.slice(next.length - 6) : next;
         });
       }
-
 
       if (data.handCounts) {
         setOpponents(prev => prev.map(opp => ({
@@ -206,6 +216,7 @@ export default function useGame() {
 
     const handleGameError = (data) => {
       console.warn('[Game] Erro na jogada:', data?.message);
+      setFeedbackMessage({ text: data?.message || 'Ação inválida!', type: 'error' });
     };
 
     const handleUnoShout = (data) => {
@@ -225,7 +236,6 @@ export default function useGame() {
     const handleChallengeAlert = (data) => {
       setFeedbackMessage({ text: data.message, type: 'warning' });
     };
-
 
     const handleConnect = () => {
       socket.emit('game:join_room', { gameId: Number(roomId), token });
@@ -255,6 +265,17 @@ export default function useGame() {
     };
 
   }, [roomId, token, navigate, updateOpponentsState]);
+
+  // Cronômetro visual em loop do timer
+  useEffect(() => {
+    if (isLobbyMode || !gameState.currentTurnPlayer) return;
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isLobbyMode, gameState.currentTurnPlayer]);
 
   // Auto-dismiss feedback messages
   useEffect(() => {
@@ -371,6 +392,7 @@ export default function useGame() {
   const handleDrawCard = () => {
     const myUsername = currentUser?.username || currentUser?.name;
     if (gameState.currentTurnPlayer && gameState.currentTurnPlayer !== myUsername) {
+      setFeedbackMessage({ text: 'Não é a sua vez de comprar carta!', type: 'warning' });
       return;
     }
 
@@ -383,16 +405,28 @@ export default function useGame() {
     const myUsername = currentUser?.username || currentUser?.name;
     const mySaidUno = gameState.saidUno ? gameState.saidUno[myUsername] : false;
 
-    if (mySaidUno) return; // Se já gritou UNO, ignora o clique (não espama)
+    if (mySaidUno) {
+      setFeedbackMessage({ text: 'Você já gritou UNO!', type: 'warning' });
+      return;
+    }
 
-    if (playerCards.length > 2 || playerCards.length === 0) return; // Não pode clicar com 3+ cartas ou 0
+    if (playerCards.length > 2 || playerCards.length === 0) {
+      setFeedbackMessage({ text: 'Você só pode gritar UNO com 1 ou 2 cartas!', type: 'warning' });
+      return;
+    }
 
     if (playerCards.length === 2) {
-      if (gameState.currentTurnPlayer !== myUsername) return; // Com 2 cartas, só na sua vez
+      if (gameState.currentTurnPlayer !== myUsername) {
+        setFeedbackMessage({ text: 'Com 2 cartas, você só pode gritar UNO na sua vez!', type: 'warning' });
+        return;
+      }
 
       const topCard = playedCards[playedCards.length - 1];
       const hasPlayable = playerCards.some(card => isCardPlayable(card, topCard, gameState.activeColor));
-      if (!hasPlayable) return; // Com 2 cartas, deve ter alguma carta jogável para poder bater
+      if (!hasPlayable) {
+        setFeedbackMessage({ text: 'Você tem 2 cartas, mas nenhuma pode ser jogada agora!', type: 'warning' });
+        return;
+      }
     }
 
     // Tocar localmente garantido pelo clique do usuário (bypass política de autoplay)
@@ -445,6 +479,7 @@ export default function useGame() {
     handleLogout,
     colorPickerOpen,
     handleSelectColor,
-    feedbackMessage
+    feedbackMessage,
+    timeLeft
   };
 }
