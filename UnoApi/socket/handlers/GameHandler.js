@@ -51,9 +51,10 @@ export default function setupGameEvents(io, socket) {
       console.log(`[GameHandler] ${username} entrou na sala game_${gameId} (e private_${gameId}_${username})`);
 
       const game = await GameService.findById(gameId);
-      const players = game?.usersInGame || [];
+      const rawPlayers = game?.usersInGame || [];
+      const players = rawPlayers.map(({ token, ...rest }) => rest);
 
-      // Broadcast da lista real de jogadores para todos na sala
+      // Broadcast da lista real de jogadores (sanitizada, sem tokens) para todos na sala
       io.to(`game_${gameId}`).emit('lobby:updated', {
         gameId,
         players,
@@ -121,6 +122,9 @@ export default function setupGameEvents(io, socket) {
       // 5. Emite a mão privada para cada jogador individualmente
       emitPrivateHands(io, gameId, round.toJSON(), players);
 
+      // 6. TIMER: Inicia o relógio do primeiro turno (Índice 0)
+      startTurnTimer(io, gameId, 0);
+
     } catch (err) {
       console.error('[GameHandler] game:start error:', err);
       emitError('game:start', err.message || 'Erro ao iniciar a partida.');
@@ -165,14 +169,17 @@ export default function setupGameEvents(io, socket) {
         );
       }
 
-      // 3. Aplica o efeito da carta (retorna novos valores, sem mutar o round)
+      // 3. TIMER: Jogada validada com sucesso! Limpamos o timer atual.
+      clearTurnTimer(gameId);
+
+      // 4. Aplica o efeito da carta (retorna novos valores, sem mutar o round)
       const { direction, pendingDraws, activeColor } = RoundService.applyCardEffect(
         card,
         { direction: round.direction, pendingDraws: round.pendingDraws, activeColor: round.activeColor },
         chosenColor
       );
 
-      // 4. Remove carta da mão do jogador e adiciona ao descarte (imutável)
+      // 5. Remove carta da mão do jogador e adiciona ao descarte (imutável)
       let hands = { ...round.hands, [username]: hand.filter((_, i) => i !== cardIndex) };
       let discardPile = [...(round.discardPile || []), card];
       let deck = [...(round.deck || [])];
@@ -182,7 +189,7 @@ export default function setupGameEvents(io, socket) {
         saidUno[username] = false;
       }
 
-      // 5. Aplica as compras forçadas ao próximo jogador imediato (Draw2/WildDraw4)
+      // 6. Aplica as compras forçadas ao próximo jogador imediato (Draw2/WildDraw4)
       if (pendingDraws > 0) {
         const immediateNextIndex =
           ((round.currentPlayerIndex + direction) % players.length + players.length) % players.length;
@@ -197,18 +204,18 @@ export default function setupGameEvents(io, socket) {
         }
       }
 
-      // 6. Calcula o próximo jogador (considerando Skip e Reverse em 2 jogadores)
+      // 7. Calcula o próximo jogador (considerando Skip e Reverse em 2 jogadores)
       const nextIndex = RoundService.advanceTurn(round.currentPlayerIndex, direction, players.length, card.value);
 
-      // 7. Verifica se este jogador venceu a rodada (mão zerada)
+      // 8. Verifica se este jogador venceu a rodada (mão zerada)
       const roundWinner = RoundService.checkRoundWinner(hands);
 
-      // 8. Persiste o estado atualizado no banco
+      // 9. Persiste o estado atualizado no banco
       await round.update({
         currentPlayerIndex: roundWinner ? round.currentPlayerIndex : nextIndex,
         direction,
         activeColor,
-        pendingDraws: 0, // Draws foram resolvidos no passo 5
+        pendingDraws: 0, // Draws foram resolvidos no passo 6
         deck,
         discardPile,
         hands,
@@ -216,7 +223,7 @@ export default function setupGameEvents(io, socket) {
         status: roundWinner ? 'finished' : 'active',
       });
 
-      // 9. Broadcast do estado público atualizado da mesa
+      // 10. Broadcast do estado público atualizado da mesa
       const updatedRoundData = round.toJSON();
       const publicState = RoundService.publicRoundState(updatedRoundData, players);
       io.to(`game_${gameId}`).emit('round:updated', {
@@ -225,9 +232,12 @@ export default function setupGameEvents(io, socket) {
       });
       emitPrivateHands(io, gameId, updatedRoundData, players);
 
-      // 10. Trata condição de vitória da rodada
+      // 11. Trata condição de vitória da rodada ou Inicia timer para o próximo
       if (roundWinner) {
         await handleRoundEnd(io, gameId, hands, players, roundWinner);
+      } else {
+        // TIMER: Inicia o timer para o próximo jogador
+        startTurnTimer(io, gameId, nextIndex);
       }
 
     } catch (err) {
@@ -256,7 +266,10 @@ export default function setupGameEvents(io, socket) {
         return emitError('turn:draw_card', 'Não é a sua vez de jogar.');
       }
 
-      // 2. Compra 1 carta e passa a vez (regra: comprar = encerrar turno)
+      // 2. TIMER: Ação válida, cancela o timer atual
+      clearTurnTimer(gameId);
+
+      // 3. Compra 1 carta do deck
       const { drawn, deck, discardPile } = RoundService.drawCards(
         round.deck || [],
         round.discardPile || [],
@@ -272,23 +285,42 @@ export default function setupGameEvents(io, socket) {
         saidUno[username] = false;
       }
 
-      const nextIndex = RoundService.advanceTurn(
-        round.currentPlayerIndex,
-        round.direction,
-        players.length,
-        null // sem efeito especial de carta
-      );
+      // Regra de jogabilidade da carta comprada:
+      // Verifica se a carta sacada pode ser jogada na rodada atual
+      const topCard = (round.discardPile || []).at(-1);
+      const drawnCard = drawn[0];
+      const isPlayable = drawnCard ? RoundService.isValidPlay(drawnCard, topCard, round.activeColor) : false;
 
-      // 3. Persiste e faz broadcast
+      let nextIndex = round.currentPlayerIndex;
+      let logMessage = '';
+
+      if (!isPlayable) {
+        // Se a carta NÃO for jogável, passa a vez automaticamente para o próximo jogador
+        nextIndex = RoundService.advanceTurn(
+          round.currentPlayerIndex,
+          round.direction,
+          players.length,
+          null
+        );
+        logMessage = `${username} comprou uma carta (não jogável) e passou a vez.`;
+      } else {
+        // Se a carta FOR jogável, mantém a vez com o jogador para ele decidir se joga ou guarda
+        logMessage = `${username} comprou uma carta jogável!`;
+      }
+
+      // 4. Persiste e faz broadcast
       await round.update({ deck, discardPile, hands, saidUno, currentPlayerIndex: nextIndex });
 
       const updatedRoundData = round.toJSON();
       const publicState = RoundService.publicRoundState(updatedRoundData, players);
       io.to(`game_${gameId}`).emit('round:updated', {
-        message: `${username} comprou uma carta.`,
+        message: logMessage,
         ...publicState,
       });
       emitPrivateHands(io, gameId, updatedRoundData, players);
+
+      // 5. TIMER: Inicia/Reseta o timer para o jogador do turno
+      startTurnTimer(io, gameId, nextIndex);
 
     } catch (err) {
       console.error('[GameHandler] turn:draw_card error:', err);
@@ -320,14 +352,18 @@ export default function setupGameEvents(io, socket) {
         message: `${username} saiu da sala.`,
       });
 
-      // Atualiza quem ficou na sala
+      // Atualiza quem ficou na sala (sanitizando tokens)
       const game = await GameService.findById(gameId).catch(() => null);
       if (game) {
+        const players = (game.usersInGame || []).map(({ token, ...rest }) => rest);
         io.to(`game_${gameId}`).emit('lobby:updated', {
           gameId,
-          players: game.usersInGame || [],
+          players,
           status: game.status
         });
+      } else {
+        // TIMER: Sala fechou ou foi deletada, limpamos o timer da memória
+        clearTurnTimer(gameId);
       }
 
       // Atualiza todas as "bolinhas" do menu de salas para todos os usuários online!
@@ -410,8 +446,10 @@ export default function setupGameEvents(io, socket) {
       for (const player of players) {
         const username = player.username;
         if (hands[username] && hands[username].length === 1 && !saidUno[username]) {
-           punishedPlayer = username;
-           break;
+           if (username !== challenger) {
+             punishedPlayer = username;
+             break;
+           }
         }
       }
 
@@ -488,6 +526,8 @@ async function handleRoundEnd(io, gameId, hands, players, winnerUsername) {
 
   if (gameWinner) {
     // ── Partida encerrada ────────────────────────────────────────────────────
+    clearTurnTimer(gameId); // TIMER: Fim de jogo, derruba o relógio
+
     const winnerUser = await User.findOne({ where: { username: gameWinner } });
     await GameService.update(gameId, {
       status: 'finished',
@@ -506,6 +546,8 @@ async function handleRoundEnd(io, gameId, hands, players, winnerUsername) {
 
   } else {
     // ── Rodada encerrada, partida continua ────────────────────────────────────
+    clearTurnTimer(gameId); // TIMER: Rodada pausou, desliga o relógio temporariamente
+
     io.to(`game_${gameId}`).emit('round:finished', {
       winner: winnerUsername,
       pointsGained: points,
@@ -527,9 +569,110 @@ async function handleRoundEnd(io, gameId, hands, players, winnerUsername) {
         });
         emitPrivateHands(io, gameId, roundData, freshPlayers);
 
+        // TIMER: Nova rodada iniciou, dispara o relógio do primeiro jogador (Índice 0)
+        startTurnTimer(io, gameId, 0);
+
       } catch (err) {
         console.error('[GameHandler] Erro ao iniciar nova rodada:', err);
       }
     }, 3000);
   }
+}
+
+// ---------------------------------------------------------------------------
+// GESTÃO DE TIMER DE TURNO
+// ---------------------------------------------------------------------------
+const turnTimers = {};
+
+/**
+ * clearTurnTimer :: gameId -> void
+ * Cancela a contagem atual da sala.
+ */
+function clearTurnTimer(gameId) {
+  if (turnTimers[gameId]) {
+    clearTimeout(turnTimers[gameId]);
+    delete turnTimers[gameId];
+  }
+}
+
+/**
+ * startTurnTimer :: (io, gameId, expectedPlayerIndex) -> void
+ * Inicia a contagem. Protegido contra "Race Conditions": só executa a punição 
+ * se a rodada ainda estiver aguardando o exato jogador original.
+ */
+function startTurnTimer(io, gameId, expectedPlayerIndex) {
+  clearTurnTimer(gameId);
+  console.log(`[Timer] Iniciando 10s na sala ${gameId} para o jogador #${expectedPlayerIndex}`);
+
+  // Grace Period: 10500ms compensa latência da internet enquanto o front mostra 10s
+  turnTimers[gameId] = setTimeout(async () => {
+    try {
+      console.log(`[Timer] TEMPO ESGOTADO na sala ${gameId}! Validando penalidade...`);
+      
+      const game = await GameService.findById(gameId);
+      if (game.status !== 'in_progress') {
+        console.log(`[Timer] Jogo não está mais em andamento. Abortando.`);
+        return;
+      }
+
+      const round = await RoundService.getActiveRound(gameId);
+      if (!round) return;
+
+      // ANTI-RACE CONDITION: Se alguém jogou no exato milissegundo final, nós ignoramos a punição
+      if (round.currentPlayerIndex !== expectedPlayerIndex) {
+        console.log(`[Timer] O turno já passou (esperava ${expectedPlayerIndex}, atual ${round.currentPlayerIndex}). Abortando.`);
+        return;
+      }
+
+      const players = game.usersInGame || [];
+      const currentPlayer = players[round.currentPlayerIndex];
+      if (!currentPlayer) return;
+
+      const username = currentPlayer.username;
+      console.log(`[Timer] Punindo jogador ${username} com 1 carta e pulo de vez.`);
+
+      // Força a compra de 1 carta
+      const { drawn, deck, discardPile } = RoundService.drawCards(
+        round.deck || [],
+        round.discardPile || [],
+        1
+      );
+
+      const hands = {
+        ...round.hands,
+        [username]: [...((round.hands || {})[username] || []), ...drawn],
+      };
+
+      let saidUno = { ...(round.saidUno || {}) };
+      if (hands[username].length > 1) {
+        saidUno[username] = false;
+      }
+
+      // Avança a vez como penalidade (passando null como valor de carta)
+      const nextIndex = RoundService.advanceTurn(
+        round.currentPlayerIndex,
+        round.direction,
+        players.length,
+        null
+      );
+
+      await round.update({ deck, discardPile, hands, saidUno, currentPlayerIndex: nextIndex });
+
+      const updatedRoundData = round.toJSON();
+      const publicState = RoundService.publicRoundState(updatedRoundData, players);
+
+      // Avisa a sala toda que o cara dormiu no ponto
+      io.to(`game_${gameId}`).emit('round:updated', {
+        message: `Tempo esgotado! ${username} comprou uma carta e perdeu a vez.`,
+        ...publicState,
+      });
+      emitPrivateHands(io, gameId, updatedRoundData, players);
+
+      // Inicia a contagem para a próxima vítima!
+      startTurnTimer(io, gameId, nextIndex);
+
+    } catch (err) {
+      console.error('[GameHandler] Erro no auto-draw do timer:', err);
+    }
+  }, 10500); // 10.5 segundos
 }
