@@ -11,6 +11,18 @@ export default function useRooms() {
   const [maxPlayers, setMaxPlayers] = useState(4);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Só exibe salas que NÃO estão finalizadas e que têm pelo menos 1 jogador
+  const formatAndFilterRooms = (games) => {
+    return games
+      .filter(game => game.status !== 'finished' && game.usersInGame && game.usersInGame.length > 0)
+      .map(game => ({
+        id: game.id,
+        max: game.maxPlayers,
+        players: game.usersInGame.length, 
+        status: game.status === 'in_progress' ? 'em jogo' : 'aguardando' 
+      }));
+  };
+
   const carregarDadosDoLobby = async () => {
     try {
       const userResponse = await api.get('/api/auth/profile');
@@ -19,15 +31,8 @@ export default function useRooms() {
         score: 0 
       });
 
-      const roomsResponse = await api.get('/api/games');
-      const salasFormatadas = roomsResponse.data.map(game => ({
-        id: game.id,
-        max: game.maxPlayers,
-        players: game.usersInGame ? game.usersInGame.length : 0, 
-        status: game.status === 'in_progress' ? 'em jogo' : 'aguardando' 
-      }));
-
-      setRooms(salasFormatadas);
+      const roomsResponse = await api.get(`/api/games?_t=${Date.now()}`);
+      setRooms(formatAndFilterRooms(roomsResponse.data));
     } catch (error) {
       console.error("Erro ao buscar dados reais do lobby:", error);
     }
@@ -39,27 +44,20 @@ export default function useRooms() {
     const socketInstance = connectSocket();
 
     const handleLobbyUpdate = (games) => {
-      const salasFormatadas = games.map(game => ({
-        id: game.id,
-        max: game.maxPlayers,
-        players: game.usersInGame ? game.usersInGame.length : 0, 
-        status: game.status === 'in_progress' ? 'em jogo' : 'aguardando' 
-      }));
-      setRooms(salasFormatadas);
+      setRooms(formatAndFilterRooms(games));
     };
 
     socketInstance.on('lobby:updated', handleLobbyUpdate);
+    socketInstance.emit('lobby:refresh_request');
 
     return () => {
       socketInstance.off('lobby:updated', handleLobbyUpdate);
     };
   }, []);
 
-
   // --- Criar Sala e Entrar ---
   const handleCreateRoom = async () => {
     try {
-      // Criar a sala no banco de dados
       const createRes = await api.post('/api/games', {
         title: `Sala do ${user?.name || 'Jogador'}`,
         maxPlayers: maxPlayers,
@@ -67,10 +65,8 @@ export default function useRooms() {
       });
       
       const newGameId = createRes.data.id;
-
-      // Salva o ID da sala para a tela de Game saber qual mesa carregar
       localStorage.setItem('currentRoomId', newGameId); 
-      navigate('/game'); // Redireciona para a mesa do jogo! A tela /game vai emitir game:join_room via Socket
+      navigate('/game'); 
 
     } catch (error) {
       console.error("Erro ao criar sala:", error);
@@ -82,7 +78,7 @@ export default function useRooms() {
   const handleJoinRoom = async (gameId) => {
     try {
       localStorage.setItem('currentRoomId', gameId);
-      navigate('/game'); // A tela /game vai emitir game:join_room via Socket
+      navigate('/game'); 
     } catch (error) {
       console.error("Erro ao entrar na sala:", error);
       alert(error.response?.data?.error || "Erro ao entrar na sala");
